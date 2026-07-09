@@ -209,6 +209,11 @@
       <h3>그룹 만들기</h3>
       <input type="text" id="newGroupName" placeholder="새 그룹 이름">
       <button class="primary" onclick="createGroup()">그룹 생성하기</button>
+      <div id="inviteLinkBox" style="display:none;margin-top:12px;">
+        <label class="small">초대 링크가 만들어졌어요! 친구에게 공유해보세요.</label>
+        <input type="text" id="inviteLinkInput" readonly onclick="this.select()">
+        <button class="dark" type="button" onclick="copyInviteLink()">링크 복사하기</button>
+      </div>
     </div>
 
     <div class="card">
@@ -219,8 +224,32 @@
 
     <!-- 주소 입력 + 참여자 + 추천 -->
     <div id="actionArea">
+      <div class="card" id="inviteBannerCard" style="display:none;">
+        <span class="badge">초대받았어요</span>
+        <p style="margin-bottom:0;" id="inviteBannerText"></p>
+      </div>
+
       <div class="card">
         <span class="badge" id="currentGroupTitle"></span>
+        <h3>모일 수 있는 날짜 선택</h3>
+        <p style="margin-bottom:8px;">달력에서 가능한 날짜를 여러 개 눌러서 선택해주세요. 선택한 날짜는 다시 누르면 취소돼요.</p>
+        <div class="row" style="align-items:center;margin-bottom:6px;">
+          <button class="chip" type="button" onclick="changeCalendarMonth(-1)">‹ 이전달</button>
+          <div id="calendarMonthLabel" style="text-align:center;font-weight:800;color:var(--ink);flex:1;"></div>
+          <button class="chip" type="button" onclick="changeCalendarMonth(1)">다음달 ›</button>
+        </div>
+        <div id="calendarGrid"></div>
+        <button class="primary" style="margin-top:10px;" onclick="saveMyAvailability()">선택한 날짜 저장하기</button>
+      </div>
+
+      <div class="card">
+        <h3>AI 모임 날짜 추천</h3>
+        <p style="margin-bottom:8px;">멤버들이 선택한 날짜를 모아서 가장 많이 겹치는 날짜를 찾아드려요.</p>
+        <button class="dark" onclick="recommendDate()">최적 날짜 추천받기</button>
+        <div id="dateResultArea"></div>
+      </div>
+
+      <div class="card">
         <h3>내 주소 등록</h3>
         <input type="text" id="userAddress" placeholder="도로명 주소 (예: 서울 강남대로 396)">
         <label class="small">가고 싶은 장소 종류가 있다면 적어주세요 (쉼표로 구분)</label>
@@ -257,7 +286,7 @@
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, collection, addDoc, query, where, onSnapshot, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, query, where, onSnapshot, getDocs, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
     import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
     const firebaseConfig = {
@@ -276,7 +305,12 @@
 
     let currentUserNickname = "";
     let currentGroupName = "";
+    let currentGroupId = "";
     let lastParticipants = []; // cache of {user, address, lat, lng, categories}
+
+    // -------------------- 초대 링크로 들어온 경우 감지 --------------------
+    const urlParams = new URLSearchParams(window.location.search);
+    const pendingInviteGroupId = urlParams.get("group"); // 그룹 문서 ID
 
     // -------------------- 인증 --------------------
     window.signUp = async () => {
@@ -322,19 +356,42 @@
         return map[e.code] || e.message;
     }
 
-    function enterService() {
+    async function enterService() {
         document.getElementById("authArea").style.display = "none";
         document.getElementById("mainServiceArea").style.display = "block";
         document.getElementById("whoAmI").innerText = currentUserNickname ? `${currentUserNickname}님` : "";
+
+        if (pendingInviteGroupId) {
+            await joinGroupById(pendingInviteGroupId, true);
+        }
     }
+
+    window.copyInviteLink = async () => {
+        const input = document.getElementById("inviteLinkInput");
+        input.select();
+        try {
+            await navigator.clipboard.writeText(input.value);
+            alert("초대 링크가 복사되었어요!");
+        } catch (e) {
+            alert("복사에 실패했어요. 직접 선택해서 복사해주세요.");
+        }
+    };
 
     // -------------------- 그룹 --------------------
     window.createGroup = async () => {
         const name = document.getElementById("newGroupName").value.trim();
         if (!name) return alert("그룹 이름을 입력하세요!");
-        await addDoc(collection(db, "groups"), { name });
-        alert("그룹 생성 완료! 이제 이 이름으로 참여할 수 있어요.");
+        const groupRef = await addDoc(collection(db, "groups"), { name });
+
+        const inviteLink = `${window.location.origin}${window.location.pathname}?group=${groupRef.id}`;
+        document.getElementById("inviteLinkInput").value = inviteLink;
+        document.getElementById("inviteLinkBox").style.display = "block";
+
+        alert("그룹 생성 완료! 초대 링크를 복사해서 친구에게 보내보세요.");
         document.getElementById("newGroupName").value = "";
+
+        // 만든 사람도 바로 그 그룹으로 이동
+        await enterGroup(groupRef.id, name, false);
     };
 
     window.joinGroup = async () => {
@@ -343,13 +400,52 @@
         const q = query(collection(db, "groups"), where("name", "==", name));
         const querySnapshot = await getDocs(q);
         if (querySnapshot.empty) return alert("존재하지 않는 그룹입니다.");
+        const groupDoc = querySnapshot.docs[0];
+        await enterGroup(groupDoc.id, groupDoc.data().name, false);
+    };
+
+    // 초대 링크(?group=ID)로 들어왔을 때 그룹에 참여
+    async function joinGroupById(groupId, fromInvite) {
+        try {
+            const snap = await getDoc(doc(db, "groups", groupId));
+            if (!snap.exists()) {
+                if (fromInvite) alert("초대 링크가 유효하지 않아요. 그룹이 존재하지 않습니다.");
+                return;
+            }
+            await enterGroup(groupId, snap.data().name, fromInvite);
+        } catch (e) {
+            console.error(e);
+            if (fromInvite) alert("초대 링크로 그룹에 참여하는 데 실패했어요.");
+        }
+    }
+
+    // 그룹 진입 공통 로직 (달력 화면 우선 노출)
+    async function enterGroup(groupId, name, fromInvite) {
+        currentGroupId = groupId;
         currentGroupName = name;
         document.getElementById("currentGroupTitle").innerText = `참여 중: ${currentGroupName}`;
         document.getElementById("actionArea").style.display = "block";
         document.getElementById("resultArea").innerHTML = "";
         document.getElementById("compareArea").innerHTML = "";
+        document.getElementById("dateResultArea").innerHTML = "";
+
+        const banner = document.getElementById("inviteBannerCard");
+        if (fromInvite) {
+            document.getElementById("inviteBannerText").innerText =
+                `"${currentGroupName}" 모임에 초대되었어요! 아래 달력에서 모일 수 있는 날짜를 골라주세요.`;
+            banner.style.display = "block";
+        } else {
+            banner.style.display = "none";
+        }
+
+        renderCalendar();
         loadParticipants();
-    };
+        loadMyAvailability();
+
+        if (fromInvite) {
+            document.getElementById("actionArea").scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+    }
 
     // -------------------- 주소 저장 (지오코딩 포함) --------------------
     window.saveMyAddress = async () => {
@@ -364,6 +460,7 @@
             const categories = categoriesRaw ? categoriesRaw.split(",").map(s => s.trim()).filter(Boolean) : [];
             await addDoc(collection(db, "Participant"), {
                 group: currentGroupName,
+                groupId: currentGroupId,
                 user: currentUserNickname,
                 address, lat, lng, categories
             });
@@ -388,7 +485,7 @@
 
     // -------------------- 참여자 목록 --------------------
     function loadParticipants() {
-        const q = query(collection(db, "Participant"), where("group", "==", currentGroupName));
+        const q = query(collection(db, "Participant"), where("groupId", "==", currentGroupId));
         onSnapshot(q, (snapshot) => {
             const list = document.getElementById("participantList");
             list.innerHTML = "";
@@ -509,6 +606,163 @@
                 ${colHtml(catB, placesB)}
             </div>`;
     };
+
+    // -------------------- 달력 (모일 수 있는 날짜 선택) --------------------
+    let calendarViewDate = new Date(); // 현재 보고 있는 달
+    let selectedDates = new Set(); // "YYYY-MM-DD" 형식
+
+    function pad2(n) { return String(n).padStart(2, "0"); }
+    function toDateKey(y, m, d) { return `${y}-${pad2(m + 1)}-${pad2(d)}`; }
+
+    window.changeCalendarMonth = (delta) => {
+        calendarViewDate.setMonth(calendarViewDate.getMonth() + delta);
+        renderCalendar();
+    };
+
+    function renderCalendar() {
+        const grid = document.getElementById("calendarGrid");
+        const label = document.getElementById("calendarMonthLabel");
+        if (!grid || !label) return;
+
+        const y = calendarViewDate.getFullYear();
+        const m = calendarViewDate.getMonth(); // 0-indexed
+        label.innerText = `${y}년 ${m + 1}월`;
+
+        const firstDay = new Date(y, m, 1).getDay(); // 0 = 일요일
+        const daysInMonth = new Date(y, m + 1, 0).getDate();
+        const weekLabels = ["일", "월", "화", "수", "목", "금", "토"];
+
+        let html = `<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center;">`;
+        weekLabels.forEach((w, i) => {
+            html += `<div style="font-size:11px;font-weight:700;color:${i === 0 ? "var(--danger)" : "var(--ink-soft)"};padding:4px 0;">${w}</div>`;
+        });
+        for (let i = 0; i < firstDay; i++) html += `<div></div>`;
+        for (let d = 1; d <= daysInMonth; d++) {
+            const key = toDateKey(y, m, d);
+            const isSelected = selectedDates.has(key);
+            html += `<button type="button" class="chip" style="margin:0;padding:8px 0;border-radius:10px;${isSelected ? "background:var(--accent);color:#241a0c;border-color:var(--accent);" : ""}" onclick="toggleDate('${key}')">${d}</button>`;
+        }
+        html += `</div>`;
+        grid.innerHTML = html;
+    }
+
+    window.toggleDate = (key) => {
+        if (selectedDates.has(key)) selectedDates.delete(key);
+        else selectedDates.add(key);
+        renderCalendar();
+    };
+
+    window.saveMyAvailability = async () => {
+        if (!currentGroupId) return alert("먼저 그룹에 참여해주세요.");
+        if (selectedDates.size === 0) return alert("달력에서 날짜를 하나 이상 선택해주세요.");
+
+        const dates = [...selectedDates].sort();
+        try {
+            const q = query(
+                collection(db, "Availability"),
+                where("groupId", "==", currentGroupId),
+                where("user", "==", currentUserNickname)
+            );
+            const snap = await getDocs(q);
+            if (snap.empty) {
+                await addDoc(collection(db, "Availability"), {
+                    groupId: currentGroupId,
+                    group: currentGroupName,
+                    user: currentUserNickname,
+                    dates
+                });
+            } else {
+                await updateDoc(doc(db, "Availability", snap.docs[0].id), { dates });
+            }
+            alert("가능한 날짜가 저장되었어요!");
+        } catch (e) {
+            console.error(e);
+            alert("날짜 저장에 실패했어요: " + e.message);
+        }
+    };
+
+    async function loadMyAvailability() {
+        if (!currentGroupId) return;
+        try {
+            const q = query(
+                collection(db, "Availability"),
+                where("groupId", "==", currentGroupId),
+                where("user", "==", currentUserNickname)
+            );
+            const snap = await getDocs(q);
+            selectedDates = new Set();
+            if (!snap.empty) {
+                const data = snap.docs[0].data();
+                (data.dates || []).forEach(d => selectedDates.add(d));
+            }
+            renderCalendar();
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    // -------------------- AI 모임 날짜 추천 --------------------
+    // 멤버들이 고른 날짜들을 모아 가장 많이 겹치는 날짜 순으로 정렬해서 보여줍니다.
+    window.recommendDate = async () => {
+        if (!currentGroupId) return alert("먼저 그룹에 참여해주세요.");
+        const resultArea = document.getElementById("dateResultArea");
+        resultArea.innerHTML = `<div class="empty">멤버들의 가능한 날짜를 모으고 있어요...</div>`;
+
+        try {
+            const q = query(collection(db, "Availability"), where("groupId", "==", currentGroupId));
+            const snap = await getDocs(q);
+
+            if (snap.empty) {
+                resultArea.innerHTML = `<div class="empty">아직 아무도 가능한 날짜를 등록하지 않았어요.</div>`;
+                return;
+            }
+
+            const entries = snap.docs.map(d => d.data());
+            const totalMembers = entries.length;
+
+            // 날짜별로 가능한 사람 수 집계
+            const tally = {}; // key -> { count, people: [] }
+            entries.forEach(e => {
+                (e.dates || []).forEach(dateKey => {
+                    if (!tally[dateKey]) tally[dateKey] = { count: 0, people: [] };
+                    tally[dateKey].count += 1;
+                    tally[dateKey].people.push(e.user);
+                });
+            });
+
+            const ranked = Object.entries(tally)
+                .map(([dateKey, info]) => ({ dateKey, ...info }))
+                .sort((a, b) => (b.count - a.count) || a.dateKey.localeCompare(b.dateKey))
+                .slice(0, 5);
+
+            if (ranked.length === 0) {
+                resultArea.innerHTML = `<div class="empty">등록된 날짜가 없어요.</div>`;
+                return;
+            }
+
+            let html = `<div class="lead">전체 ${totalMembers}명 중 가장 많이 겹치는 날짜예요.</div>`;
+            ranked.forEach((r, idx) => {
+                const isFull = r.count === totalMembers;
+                html += `
+                    <div class="place-card">
+                        <div class="name">${idx + 1}위 · ${escapeHtml(formatDateKey(r.dateKey))}${isFull ? " 🎉 전원 가능" : ""}</div>
+                        <div class="cat">${r.count}/${totalMembers}명 가능</div>
+                        <div class="addr">${r.people.map(escapeHtml).join(", ")}</div>
+                    </div>`;
+            });
+            resultArea.innerHTML = html;
+        } catch (e) {
+            console.error(e);
+            resultArea.innerHTML = `<div class="empty">추천에 실패했어요: ${escapeHtml(e.message)}</div>`;
+        }
+    };
+
+    function formatDateKey(key) {
+        const [y, m, d] = key.split("-").map(Number);
+        const dt = new Date(y, m - 1, d);
+        const weekLabels = ["일", "월", "화", "수", "목", "금", "토"];
+        return `${y}년 ${m}월 ${d}일 (${weekLabels[dt.getDay()]})`;
+    }
 
     function escapeHtml(str) {
         if (str === undefined || str === null) return "";
