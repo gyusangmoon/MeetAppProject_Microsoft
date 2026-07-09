@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>모여봐 - 그룹 중간 장소 추천</title>
+
+<!--
+  ⚠️ 카카오 지도/장소 검색 API 키를 아래에 꼭 넣어주세요.
+  1) https://developers.kakao.com 에서 애플리케이션 생성
+  2) [플랫폼 > Web] 에 이 페이지가 열릴 도메인 등록 (예: file://, localhost, 배포 도메인)
+  3) [앱 키 > JavaScript 키] 를 복사해서 아래 KAKAO_APP_KEY 부분에 붙여넣기
+  주소 → 위경도 변환, 카테고리 장소 검색 기능은 이 키가 있어야 동작합니다.
+-->
+<script src="//dapi.kakao.com/v2/maps/sdk.js?appkey=f51bbc921d6e6ce6aa7864f1e0d9b7ba&libraries=services"></script>
+
+<style>
+  :root{
+    --bg-navy:#1c1830;
+    --bg-navy-deep:#141127;
+    --card:#ffffff;
+    --card-cream:#fdf6ec;
+    --ink:#221f36;
+    --ink-soft:#6b6785;
+    --accent:#f2a65a;
+    --accent-deep:#e88f3a;
+    --accent-soft:#fbe4c9;
+    --line:#eee7f5;
+    --danger:#e0603f;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:"Pretendard","Apple SD Gothic Neo","Segoe UI",sans-serif;
+    background:var(--bg-navy);
+    background-image: radial-gradient(circle at 20% 0%, #292350 0%, transparent 45%),
+                       radial-gradient(circle at 100% 10%, #241f45 0%, transparent 40%);
+    color:var(--ink);
+    min-height:100vh;
+    display:flex;
+    justify-content:center;
+    padding:32px 16px;
+  }
+  #phone{
+    width:100%;
+    max-width:430px;
+    background:var(--bg-navy-deep);
+    border-radius:32px;
+    padding:10px;
+    box-shadow:0 30px 60px rgba(0,0,0,.45);
+  }
+  #screen{
+    background:var(--card-cream);
+    border-radius:24px;
+    min-height:640px;
+    padding:22px 18px 28px;
+    position:relative;
+    overflow:hidden;
+  }
+  h1,h2,h3{margin:0 0 6px;}
+  h1{font-size:22px;color:var(--ink);}
+  h2{font-size:17px;color:var(--ink);}
+  h3{font-size:14px;color:var(--ink-soft);font-weight:600;letter-spacing:.2px;}
+  p{color:var(--ink-soft);font-size:13px;line-height:1.5;margin:4px 0 14px;}
+
+  .card{
+    background:var(--card);
+    border-radius:18px;
+    padding:16px;
+    margin-bottom:16px;
+    box-shadow:0 6px 18px rgba(28,24,48,.06);
+  }
+  .badge{
+    display:inline-block;
+    background:var(--accent-soft);
+    color:var(--accent-deep);
+    font-size:11px;
+    font-weight:700;
+    padding:4px 10px;
+    border-radius:999px;
+    margin-bottom:10px;
+    letter-spacing:.3px;
+  }
+  input[type=text],input[type=email],input[type=password]{
+    width:100%;
+    border:1.5px solid var(--line);
+    background:#fff;
+    border-radius:12px;
+    padding:12px 14px;
+    font-size:14px;
+    margin-bottom:10px;
+    outline:none;
+    transition:border-color .15s;
+  }
+  input:focus{border-color:var(--accent);}
+  label.small{font-size:12px;color:var(--ink-soft);display:block;margin:-4px 0 6px 2px;}
+
+  button{
+    font-family:inherit;
+    cursor:pointer;
+    border:none;
+    border-radius:14px;
+    font-size:14px;
+    font-weight:700;
+    padding:13px 16px;
+    transition:transform .1s, opacity .15s;
+  }
+  button:active{transform:scale(.98);}
+  button.primary{background:var(--accent);color:#241a0c;width:100%;}
+  button.primary:hover{background:var(--accent-deep);}
+  button.dark{background:var(--ink);color:#fff;width:100%;}
+  button.ghost{background:transparent;color:var(--ink-soft);width:100%;text-decoration:underline;font-weight:500;}
+  button.chip{
+    background:var(--card-cream);
+    color:var(--ink);
+    border:1.5px solid var(--line);
+    border-radius:999px;
+    padding:8px 14px;
+    font-size:12.5px;
+    font-weight:600;
+    margin:0 6px 6px 0;
+  }
+  .row{display:flex;gap:10px;}
+  .row > *{flex:1;}
+
+  ul.plain{list-style:none;padding:0;margin:0;}
+  .member{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    background:var(--card-cream);
+    border-radius:14px;
+    padding:10px 12px;
+    margin-bottom:8px;
+    font-size:13px;
+  }
+  .avatar{
+    width:34px;height:34px;border-radius:50%;
+    background:var(--ink);color:#fff;
+    display:flex;align-items:center;justify-content:center;
+    font-size:16px;flex-shrink:0;
+  }
+  .member .meta{color:var(--ink-soft);font-size:11.5px;margin-top:2px;}
+
+  .place-card{
+    background:var(--card-cream);
+    border-radius:16px;
+    padding:14px;
+    margin-bottom:10px;
+    border:1.5px solid var(--line);
+  }
+  .place-card .name{font-weight:800;font-size:14.5px;color:var(--ink);}
+  .place-card .cat{
+    display:inline-block;
+    font-size:11px;color:var(--accent-deep);font-weight:700;margin:4px 0 6px;
+  }
+  .place-card .addr{font-size:12.5px;color:var(--ink-soft);margin-bottom:4px;}
+  .place-card a{
+    display:inline-block;margin-top:6px;font-size:12px;font-weight:700;
+    color:var(--accent-deep);text-decoration:none;
+  }
+
+  .compare-cols{display:flex;gap:12px;}
+  .compare-cols .col{flex:1;min-width:0;}
+  .compare-cols h3{color:var(--ink);font-size:13px;margin-bottom:8px;}
+
+  #authArea{}
+  #mainServiceArea{display:none;}
+  #actionArea{display:none;}
+  .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;}
+  .topbar .who{font-size:12px;color:var(--ink-soft);}
+  .link-btn{background:none;border:none;color:var(--accent-deep);font-weight:700;font-size:12px;padding:0;}
+  .empty{font-size:12.5px;color:var(--ink-soft);padding:8px 2px;}
+  #resultArea .lead{font-size:12.5px;color:var(--ink-soft);margin-bottom:10px;}
+</style>
+</head>
+<body>
+<div id="phone"><div id="screen">
+
+  <!-- ===================== 로그인 / 회원가입 ===================== -->
+  <div id="authArea">
+    <span class="badge">모여봐</span>
+    <h1>다시 만나서 반가워요!</h1>
+    <p>이메일과 비밀번호로 로그인하거나, 처음이시라면 계정을 만들어주세요.</p>
+
+    <div class="card">
+      <input type="email" id="email" placeholder="이메일">
+      <input type="password" id="password" placeholder="비밀번호">
+      <button class="primary" onclick="signIn()">로그인</button>
+    </div>
+
+    <div class="card">
+      <h3 style="margin-bottom:10px;">처음이신가요?</h3>
+      <input type="text" id="nickname" placeholder="닉네임">
+      <input type="email" id="signupEmail" placeholder="이메일">
+      <input type="password" id="signupPassword" placeholder="비밀번호 (6자 이상)">
+      <button class="dark" onclick="signUp()">회원가입</button>
+    </div>
+  </div>
+
+  <!-- ===================== 메인 서비스 ===================== -->
+  <div id="mainServiceArea">
+    <div class="topbar">
+      <h1 style="font-size:19px;">모여봐</h1>
+      <span class="who" id="whoAmI"></span>
+    </div>
+
+    <div class="card">
+      <h3>그룹 만들기</h3>
+      <input type="text" id="newGroupName" placeholder="새 그룹 이름">
+      <button class="primary" onclick="createGroup()">그룹 생성하기</button>
+    </div>
+
+    <div class="card">
+      <h3>그룹 참여하기</h3>
+      <input type="text" id="searchGroupName" placeholder="참여할 그룹 이름">
+      <button class="dark" onclick="joinGroup()">참여하기</button>
+    </div>
+
+    <!-- 주소 입력 + 참여자 + 추천 -->
+    <div id="actionArea">
+      <div class="card">
+        <span class="badge" id="currentGroupTitle"></span>
+        <h3>내 주소 등록</h3>
+        <input type="text" id="userAddress" placeholder="도로명 주소 (예: 서울 강남대로 396)">
+        <label class="small">가고 싶은 장소 종류가 있다면 적어주세요 (쉼표로 구분)</label>
+        <input type="text" id="userCategories" placeholder="예: 카페, 방탈출, 치킨">
+        <button class="primary" onclick="saveMyAddress()">내 정보 저장하기</button>
+      </div>
+
+      <div class="card">
+        <h3>참여 멤버</h3>
+        <ul class="plain" id="participantList"></ul>
+      </div>
+
+      <div class="card">
+        <h3>AI 중간 장소 추천</h3>
+        <p style="margin-bottom:8px;">멤버들의 주소와 원하는 카테고리를 바탕으로 중간 지점 근처의 장소를 찾아드려요.</p>
+        <button class="primary" onclick="recommendLocation()">중간 장소 추천받기</button>
+        <div id="resultArea"></div>
+      </div>
+
+      <div class="card">
+        <h3>장소 비교하기</h3>
+        <p style="margin-bottom:8px;">두 가지 카테고리를 넣으면 중간 지점 근처에서 각각 후보를 찾아 나란히 비교해드려요.</p>
+        <div class="row">
+          <input type="text" id="compareA" placeholder="예: 치킨">
+          <input type="text" id="compareB" placeholder="예: 떡볶이">
+        </div>
+        <button class="dark" onclick="compareCategories()">비교하기</button>
+        <div id="compareArea"></div>
+      </div>
+    </div>
+  </div>
+
+</div></div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, collection, addDoc, query, where, onSnapshot, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyCuFkfVGEBOw0DgFc_HHFVNwH7MygwywFo",
+        authDomain: "database-f30fe.firebaseapp.com",
+        projectId: "database-f30fe",
+        storageBucket: "database-f30fe.firebasestorage.app",
+        messagingSenderId: "297111267801",
+        appId: "1:297111267801:web:785326fe551b9244a251c8",
+        measurementId: "G-8Y2KEDEQPD"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+
+    let currentUserNickname = "";
+    let currentGroupName = "";
+    let lastParticipants = []; // cache of {user, address, lat, lng, categories}
+
+    // -------------------- 인증 --------------------
+    window.signUp = async () => {
+        const email = document.getElementById("signupEmail").value.trim();
+        const password = document.getElementById("signupPassword").value;
+        const nickname = document.getElementById("nickname").value.trim();
+        if (!email || !password || !nickname) return alert("닉네임, 이메일, 비밀번호를 모두 입력해주세요!");
+        try {
+            await createUserWithEmailAndPassword(auth, email, password);
+            await addDoc(collection(db, "User"), { email, nickname });
+            currentUserNickname = nickname;
+            alert(`회원가입 완료! 환영합니다, ${nickname}님!`);
+            enterService();
+        } catch (e) {
+            alert("회원가입 실패: " + friendlyAuthError(e));
+        }
+    };
+
+    window.signIn = async () => {
+        const email = document.getElementById("email").value.trim();
+        const password = document.getElementById("password").value;
+        if (!email || !password) return alert("이메일과 비밀번호를 입력해주세요!");
+        try {
+            await signInWithEmailAndPassword(auth, email, password);
+            const q = query(collection(db, "User"), where("email", "==", email));
+            const snap = await getDocs(q);
+            snap.forEach(doc => { currentUserNickname = doc.data().nickname; });
+            enterService();
+        } catch (e) {
+            alert("로그인 실패: " + friendlyAuthError(e));
+        }
+    };
+
+    function friendlyAuthError(e) {
+        const map = {
+            "auth/email-already-in-use": "이미 가입된 이메일입니다.",
+            "auth/invalid-email": "이메일 형식이 올바르지 않습니다.",
+            "auth/weak-password": "비밀번호는 6자 이상이어야 합니다.",
+            "auth/invalid-credential": "이메일 또는 비밀번호가 올바르지 않습니다.",
+            "auth/user-not-found": "가입되지 않은 이메일입니다.",
+            "auth/wrong-password": "비밀번호가 올바르지 않습니다."
+        };
+        return map[e.code] || e.message;
+    }
+
+    function enterService() {
+        document.getElementById("authArea").style.display = "none";
+        document.getElementById("mainServiceArea").style.display = "block";
+        document.getElementById("whoAmI").innerText = currentUserNickname ? `${currentUserNickname}님` : "";
+    }
+
+    // -------------------- 그룹 --------------------
+    window.createGroup = async () => {
+        const name = document.getElementById("newGroupName").value.trim();
+        if (!name) return alert("그룹 이름을 입력하세요!");
+        await addDoc(collection(db, "groups"), { name });
+        alert("그룹 생성 완료! 이제 이 이름으로 참여할 수 있어요.");
+        document.getElementById("newGroupName").value = "";
+    };
+
+    window.joinGroup = async () => {
+        const name = document.getElementById("searchGroupName").value.trim();
+        if (!name) return alert("참여할 그룹 이름을 입력하세요!");
+        const q = query(collection(db, "groups"), where("name", "==", name));
+        const querySnapshot = await getDocs(q);
+        if (querySnapshot.empty) return alert("존재하지 않는 그룹입니다.");
+        currentGroupName = name;
+        document.getElementById("currentGroupTitle").innerText = `참여 중: ${currentGroupName}`;
+        document.getElementById("actionArea").style.display = "block";
+        document.getElementById("resultArea").innerHTML = "";
+        document.getElementById("compareArea").innerHTML = "";
+        loadParticipants();
+    };
+
+    // -------------------- 주소 저장 (지오코딩 포함) --------------------
+    window.saveMyAddress = async () => {
+        const address = document.getElementById("userAddress").value.trim();
+        const categoriesRaw = document.getElementById("userCategories").value.trim();
+        if (!address) return alert("주소를 입력하세요!");
+        if (typeof kakao === "undefined" || !kakao.maps || !kakao.maps.services) {
+            return alert("카카오 지도 API 키가 설정되지 않았습니다. HTML 상단의 KAKAO_JAVASCRIPT_KEY를 채워주세요.");
+        }
+        try {
+            const { lat, lng } = await geocodeAddress(address);
+            const categories = categoriesRaw ? categoriesRaw.split(",").map(s => s.trim()).filter(Boolean) : [];
+            await addDoc(collection(db, "Participant"), {
+                group: currentGroupName,
+                user: currentUserNickname,
+                address, lat, lng, categories
+            });
+            alert("저장 완료!");
+        } catch (e) {
+            alert("주소 변환에 실패했어요: " + e.message + "\n도로명 주소를 다시 확인해주세요.");
+        }
+    };
+
+    function geocodeAddress(address) {
+        return new Promise((resolve, reject) => {
+            const geocoder = new kakao.maps.services.Geocoder();
+            geocoder.addressSearch(address, (result, status) => {
+                if (status === kakao.maps.services.Status.OK) {
+                    resolve({ lat: parseFloat(result[0].y), lng: parseFloat(result[0].x) });
+                } else {
+                    reject(new Error("해당 주소를 찾을 수 없습니다."));
+                }
+            });
+        });
+    }
+
+    // -------------------- 참여자 목록 --------------------
+    function loadParticipants() {
+        const q = query(collection(db, "Participant"), where("group", "==", currentGroupName));
+        onSnapshot(q, (snapshot) => {
+            const list = document.getElementById("participantList");
+            list.innerHTML = "";
+            lastParticipants = [];
+            if (snapshot.empty) {
+                list.innerHTML = `<div class="empty">아직 등록된 멤버가 없어요.</div>`;
+                return;
+            }
+            snapshot.forEach((doc) => {
+                const d = doc.data();
+                lastParticipants.push(d);
+                const li = document.createElement("li");
+                li.className = "member";
+                li.innerHTML = `
+                    <div class="avatar">${(d.user || "?").charAt(0)}</div>
+                    <div>
+                        <div><strong>${escapeHtml(d.user)}</strong></div>
+                        <div class="meta">${escapeHtml(d.address)}${d.categories && d.categories.length ? " · " + d.categories.map(escapeHtml).join(", ") : ""}</div>
+                    </div>`;
+                list.appendChild(li);
+            });
+        });
+    }
+
+    // -------------------- 중간 지점 계산 --------------------
+    function computeMidpoint(participants) {
+        const valid = participants.filter(p => typeof p.lat === "number" && typeof p.lng === "number");
+        if (valid.length === 0) return null;
+        const lat = valid.reduce((s, p) => s + p.lat, 0) / valid.length;
+        const lng = valid.reduce((s, p) => s + p.lng, 0) / valid.length;
+        return { lat, lng };
+    }
+
+    // -------------------- 카테고리 장소 검색 --------------------
+    function searchPlaces(keyword, lat, lng, radius = 3000) {
+        return new Promise((resolve) => {
+            if (typeof kakao === "undefined" || !kakao.maps.services) return resolve([]);
+            const ps = new kakao.maps.services.Places();
+            ps.keywordSearch(keyword, (data, status) => {
+                if (status === kakao.maps.services.Status.OK) resolve(data);
+                else resolve([]);
+            }, {
+                location: new kakao.maps.LatLng(lat, lng),
+                radius,
+                sort: kakao.maps.services.SortBy.ACCURACY
+            });
+        });
+    }
+
+    function placeCardHtml(place) {
+        return `
+            <div class="place-card">
+                <div class="name">${escapeHtml(place.place_name)}</div>
+                <div class="cat">${escapeHtml((place.category_name || "").split(">").pop().trim())}</div>
+                <div class="addr">${escapeHtml(place.road_address_name || place.address_name)}</div>
+                <div class="addr">중간 지점에서 약 ${place.distance ? Math.round(place.distance) + "m" : "-"}</div>
+                <a href="${place.place_url}" target="_blank" rel="noopener">카카오맵에서 리뷰 보기 →</a>
+            </div>`;
+    }
+
+    // -------------------- 추천 --------------------
+    window.recommendLocation = async () => {
+        if (lastParticipants.length < 2) return alert("멤버가 2명 이상이어야 추천할 수 있어요.");
+        const mid = computeMidpoint(lastParticipants);
+        if (!mid) return alert("먼저 멤버들의 주소가 등록되어야 해요.");
+
+        const resultArea = document.getElementById("resultArea");
+        resultArea.innerHTML = `<div class="empty">추천 장소를 찾고 있어요...</div>`;
+
+        let categories = [...new Set(lastParticipants.flatMap(p => p.categories || []))];
+        if (categories.length === 0) categories = ["맛집", "카페"]; // 기본값
+
+        let html = `<div class="lead">중간 지점 근처, 멤버들이 원한 카테고리 기준 추천이에요.</div>`;
+        for (const cat of categories) {
+            const places = await searchPlaces(cat, mid.lat, mid.lng);
+            html += `<h3 style="margin-top:12px;">${escapeHtml(cat)}</h3>`;
+            if (places.length === 0) {
+                html += `<div class="empty">근처에서 "${escapeHtml(cat)}" 관련 장소를 찾지 못했어요.</div>`;
+            } else {
+                html += placeCardHtml(places[0]);
+            }
+        }
+        resultArea.innerHTML = html;
+    };
+
+    // -------------------- 비교 --------------------
+    window.compareCategories = async () => {
+        if (lastParticipants.length < 2) return alert("멤버가 2명 이상이어야 비교할 수 있어요.");
+        const mid = computeMidpoint(lastParticipants);
+        if (!mid) return alert("먼저 멤버들의 주소가 등록되어야 해요.");
+
+        const catA = document.getElementById("compareA").value.trim();
+        const catB = document.getElementById("compareB").value.trim();
+        if (!catA || !catB) return alert("비교할 카테고리 두 개를 모두 입력해주세요.");
+
+        const compareArea = document.getElementById("compareArea");
+        compareArea.innerHTML = `<div class="empty">비교 중이에요...</div>`;
+
+        const [placesA, placesB] = await Promise.all([
+            searchPlaces(catA, mid.lat, mid.lng),
+            searchPlaces(catB, mid.lat, mid.lng)
+        ]);
+
+        const colHtml = (label, places) => {
+            let inner = `<h3>${escapeHtml(label)}</h3>`;
+            if (places.length === 0) {
+                inner += `<div class="empty">결과가 없어요.</div>`;
+            } else {
+                inner += places.slice(0, 3).map(placeCardHtml).join("");
+            }
+            return `<div class="col">${inner}</div>`;
+        };
+
+        compareArea.innerHTML = `
+            <div class="lead">카카오맵 검색 기준 상위 결과예요. 실제 평점·리뷰는 링크에서 확인해보세요.</div>
+            <div class="compare-cols">
+                ${colHtml(catA, placesA)}
+                ${colHtml(catB, placesB)}
+            </div>`;
+    };
+
+    function escapeHtml(str) {
+        if (str === undefined || str === null) return "";
+        return String(str)
+            .replaceAll("&", "&amp;").replaceAll("<", "&lt;")
+            .replaceAll(">", "&gt;").replaceAll('"', "&quot;");
+    }
+</script>
+</body>
+</html>
