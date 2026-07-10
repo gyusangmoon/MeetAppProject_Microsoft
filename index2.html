@@ -251,7 +251,7 @@
       <h1 style="font-size:19px;">🐣 모여봐</h1>
       <span class="who" id="whoAmI"></span>
     </div>
-
+    <div id="groupSelectionArea">
     <div class="card">
       <h3>👥 그룹 만들기</h3>
       <input type="text" id="newGroupName" placeholder="새 그룹 이름">
@@ -268,13 +268,14 @@
       <input type="text" id="searchGroupName" placeholder="참여할 그룹 이름">
       <button class="dark" onclick="joinGroup()">참여하기</button>
     </div>
-
+    </div>
     <!-- 주소 입력 + 참여자 + 추천 -->
     <div id="actionArea">
-      <div class="card" id="inviteBannerCard" style="display:none;">
-        <span class="badge alt">💌 초대받았어요</span>
-        <p style="margin-bottom:0;" id="inviteBannerText"></p>
-      </div>
+        <button class="ghost" onclick="goHome()" style="text-align:left; padding: 0 0 16px 4px; font-size:13px; color:var(--ink-soft); box-shadow:none;">&lt; 그룹 목록으로 (홈)</button>
+        <div class="card" id="inviteBannerCard" style="display:none;">
+            <span class="badge alt">💌 초대받았어요</span>
+            <p style="margin-bottom:0;" id="inviteBannerText"></p>
+        </div>
 
       <div class="card">
         <span class="badge" id="currentGroupTitle"></span>
@@ -418,9 +419,10 @@
         document.getElementById("authArea").style.display = "none";
         document.getElementById("mainServiceArea").style.display = "block";
         document.getElementById("whoAmI").innerText = currentUserNickname ? `${currentUserNickname}님` : "";
-
+        document.getElementById("groupSelectionArea").style.display = "block";
+        document.getElementById("actionArea").style.display = "none";
         if (pendingInviteGroupId) {
-            await joinGroupById(pendingInviteGroupId, true);
+            await joinGroupById (pendingInviteGroupId, true);
         }
     }
 
@@ -482,6 +484,7 @@
         currentGroupId = groupId;
         currentGroupName = name;
         document.getElementById("currentGroupTitle").innerText = `참여 중: ${currentGroupName}`;
+        document.getElementById("groupSelectionArea").style.display = "none";
         document.getElementById("actionArea").style.display = "block";
         document.getElementById("resultArea").innerHTML = "";
         document.getElementById("compareArea").innerHTML = "";
@@ -933,6 +936,17 @@
             .replaceAll("&", "&amp;").replaceAll("<", "&lt;")
             .replaceAll(">", "&gt;").replaceAll('"', "&quot;");
     }
+
+    // 홈 화면으로 돌아가는 기능
+    window.goHome = () => {
+        currentGroupId = "";
+        currentGroupName = "";
+        
+        document.getElementById("groupSelectionArea").style.display = "block";
+        document.getElementById("actionArea").style.display = "none";
+        
+        window.history.replaceState({}, document.title, window.location.pathname);
+        };
 </script>
 </body>
 </html>
