@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>겹치는 날 · 모임 조율</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&family=Noto+Sans+KR:wght@400;500;700;900&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #12162A;
+    --surface: #1B2036;
+    --surface-2: #232A45;
+    --ink: #F4F1E8;
+    --muted: #9AA0C3;
+    --line: #323A5C;
+    --coral: #FF8C5A;
+    --mint: #6EE7C2;
+    --yellow: #FFD166;
+    --danger: #FF6B6B;
+    --radius: 18px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background: var(--bg);
+    color: var(--ink);
+    font-family:'Noto Sans KR', sans-serif;
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+  }
+  #root{max-width:960px;margin:0 auto;padding:28px 20px 80px;}
+
+  h1,h2,h3{font-family:'Gaegu','Noto Sans KR',sans-serif; margin:0;}
+  .eyebrow{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px; letter-spacing:.12em; text-transform:uppercase;
+    color: var(--muted);
+  }
+
+  /* header / venn hero */
+  .hero{display:flex; align-items:center; gap:20px; padding:6px 0 22px; border-bottom:1px solid var(--line); margin-bottom:26px;}
+  .hero-mark{width:64px;height:64px;flex-shrink:0;}
+  .hero h1{font-size:32px; font-weight:700; letter-spacing:.01em;}
+  .hero p{margin:4px 0 0; color:var(--muted); font-size:14px;}
+
+  /* stepper */
+  .stepper{display:flex; gap:6px; margin-bottom:28px; flex-wrap:wrap;}
+  .step-chip{
+    display:flex; align-items:center; gap:6px;
+    font-family:'IBM Plex Mono',monospace; font-size:11px;
+    color: var(--muted); padding:6px 10px; border-radius:999px;
+    border:1px solid var(--line); background:var(--surface);
+  }
+  .step-chip.active{ color:var(--bg); background:var(--yellow); border-color:var(--yellow); font-weight:700;}
+  .step-chip.done{ color:var(--mint); border-color:var(--mint);}
+
+  .card{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius: var(--radius);
+    padding:26px;
+    margin-bottom:18px;
+  }
+  .card h2{font-size:24px; margin-bottom:6px;}
+  .subtext{color:var(--muted); font-size:14px; margin-bottom:18px; line-height:1.6;}
+
+  label{display:block; font-size:13px; color:var(--muted); margin:14px 0 6px;}
+  input[type=text], select, textarea{
+    width:100%; padding:12px 14px; border-radius:12px;
+    border:1px solid var(--line); background:var(--surface-2); color:var(--ink);
+    font-family:'Noto Sans KR',sans-serif; font-size:15px;
+  }
+  input::placeholder{color:#6b7196;}
+  input:focus, select:focus, textarea:focus{outline:2px solid var(--yellow); outline-offset:1px;}
+
+  .btn{
+    display:inline-flex; align-items:center; justify-content:center; gap:8px;
+    padding:13px 22px; border-radius:999px; border:none; cursor:pointer;
+    font-family:'Noto Sans KR',sans-serif; font-weight:700; font-size:15px;
+    background: var(--yellow); color:#12162A;
+    transition:transform .12s ease, box-shadow .12s ease;
+  }
+  .btn:hover{transform:translateY(-1px); box-shadow:0 6px 18px rgba(255,209,102,.25);}
+  .btn:active{transform:translateY(0);}
+  .btn:disabled{opacity:.4; cursor:not-allowed; transform:none; box-shadow:none;}
+  .btn.secondary{background:transparent; color:var(--ink); border:1px solid var(--line);}
+  .btn.secondary:hover{border-color:var(--mint); box-shadow:none;}
+  .btn.ghost{background:transparent; color:var(--muted); padding:8px 14px; font-weight:500;}
+  .btn.coral{background:var(--coral); color:#1a1207;}
+  .btn.small{padding:8px 16px; font-size:13px;}
+
+  .row{display:flex; gap:10px; flex-wrap:wrap;}
+  .row > *{flex:1; min-width:140px;}
+
+  /* code display */
+  .code-box{
+    display:flex; align-items:center; justify-content:space-between;
+    background:var(--surface-2); border:1px dashed var(--mint);
+    border-radius:14px; padding:16px 20px; margin:10px 0 6px;
+  }
+  .code-box .code{font-family:'IBM Plex Mono',monospace; font-size:26px; letter-spacing:.15em; color:var(--mint); font-weight:500;}
+
+  /* member list */
+  .member{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:12px 14px; border-radius:12px; background:var(--surface-2);
+    margin-bottom:8px; font-size:14px;
+  }
+  .badge{
+    font-family:'IBM Plex Mono',monospace; font-size:11px; padding:3px 9px; border-radius:999px;
+  }
+  .badge.done{background:rgba(110,231,194,.15); color:var(--mint);}
+  .badge.pending{background:rgba(154,160,195,.15); color:var(--muted);}
+
+  /* keyword chips */
+  .chip-input-wrap{display:flex; flex-wrap:wrap; gap:8px; padding:10px; border:1px solid var(--line); border-radius:12px; background:var(--surface-2);}
+  .chip{
+    background:var(--coral); color:#1a1207; font-size:13px; font-weight:700;
+    padding:6px 12px; border-radius:999px; display:flex; align-items:center; gap:6px;
+  }
+  .chip button{background:none; border:none; color:#1a1207; cursor:pointer; font-weight:900; font-size:13px; padding:0;}
+  .chip-input-wrap input{border:none; background:transparent; flex:1; min-width:120px; padding:6px;}
+
+  /* calendar */
+  .cal-grid{display:grid; grid-template-columns:repeat(7,1fr); gap:6px; margin-top:8px;}
+  .cal-dow{text-align:center; font-size:11px; color:var(--muted); font-family:'IBM Plex Mono',monospace; padding-bottom:4px;}
+  .cal-day{
+    aspect-ratio:1; display:flex; align-items:center; justify-content:center;
+    border-radius:10px; background:var(--surface-2); font-size:13px; cursor:pointer;
+    border:1px solid transparent; color:var(--ink); user-select:none;
+  }
+  .cal-day.empty{background:transparent; cursor:default;}
+  .cal-day:hover:not(.empty){border-color:var(--mint);}
+  .cal-day.selected{background:var(--mint); color:#0d1a17; font-weight:700;}
+  .cal-month-label{font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--yellow); margin:18px 0 6px;}
+
+  /* venn viz */
+  .venn-wrap{display:flex; justify-content:center; padding:14px 0 6px;}
+  .venn-legend{display:flex; gap:18px; justify-content:center; flex-wrap:wrap; font-size:12px; color:var(--muted); margin-top:8px;}
+  .venn-legend span{display:inline-flex; align-items:center; gap:6px;}
+  .dot{width:10px;height:10px;border-radius:50%; display:inline-block;}
+
+  /* result panel */
+  .result-grid{display:grid; grid-template-columns:1fr 1fr; gap:14px; margin:16px 0;}
+  .result-tile{background:var(--surface-2); border-radius:14px; padding:16px;}
+  .result-tile .k{font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--muted); text-transform:uppercase; margin-bottom:6px;}
+  .result-tile .v{font-size:17px; font-weight:700;}
+  .reasoning{background:var(--surface-2); border-left:3px solid var(--yellow); padding:14px 16px; border-radius:0 12px 12px 0; font-size:14px; line-height:1.7; color:var(--ink);}
+
+  /* place cards */
+  .place-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:12px; margin-top:14px;}
+  .place-card{
+    background:var(--surface-2); border:2px solid transparent; border-radius:14px; padding:16px; cursor:pointer;
+    transition:border-color .15s;
+  }
+  .place-card:hover{border-color:var(--line);}
+  .place-card.selected{border-color:var(--coral); background:rgba(255,140,90,.08);}
+  .place-card .cat{font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--yellow); text-transform:uppercase;}
+  .place-card h3{font-size:16px; margin:6px 0 6px;}
+  .place-card p{font-size:12.5px; color:var(--muted); line-height:1.5; margin:0;}
+
+  .route-item{display:flex; gap:14px; align-items:flex-start; padding:14px 0; border-bottom:1px solid var(--line);}
+  .route-item:last-child{border-bottom:none;}
+  .route-num{
+    width:30px; height:30px; border-radius:50%; background:var(--yellow); color:#12162A;
+    display:flex; align-items:center; justify-content:center; font-weight:900; font-family:'IBM Plex Mono',monospace;
+    flex-shrink:0;
+  }
+  .route-item h3{font-size:16px; margin-bottom:4px;}
+  .route-item p{font-size:13px; color:var(--muted); margin:2px 0; line-height:1.6;}
+  .route-item .style-tip{color:var(--mint); font-size:13px; margin-top:4px;}
+
+  .loading{display:flex; align-items:center; gap:10px; color:var(--muted); font-size:14px; padding:10px 0;}
+  .spinner{width:16px;height:16px;border-radius:50%; border:2px solid var(--line); border-top-color:var(--yellow); animation:spin .7s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+
+  .footer-nav{display:flex; justify-content:space-between; margin-top:20px;}
+  .error-box{background:rgba(255,107,107,.1); border:1px solid var(--danger); color:#ffb3b3; padding:12px 16px; border-radius:12px; font-size:13px; margin-top:10px;}
+
+  @media (max-width:640px){
+    .result-grid{grid-template-columns:1fr;}
+    .hero h1{font-size:24px;}
+  }
+</style>
+</head>
+<body>
+<div id="root">
+
+  <div class="hero">
+    <svg class="hero-mark" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="38" cy="50" r="30" fill="var(--coral)" opacity="0.75"/>
+      <circle cx="62" cy="50" r="30" fill="var(--mint)" opacity="0.75"/>
+    </svg>
+    <div>
+      <h1>겹치는 날</h1>
+      <p>친구들의 일정·장소·취향이 겹치는 지점을 AI가 찾아드려요</p>
+    </div>
+  </div>
+
+  <div class="stepper" id="stepper"></div>
+  <div id="screen"></div>
+</div>
+
+<script>
+/* ============================================================
+   STATE
+============================================================ */
+const STEP_LABELS = ['로그인','모임','내 일정','분석','확정','장소','동선'];
+let profile = null;      // {name}
+let group = null;        // shared group object
+let currentStep = 0;
+let calCursorMonths = [];// two Date objects for calendar rendering
+let mySelectedDates = new Set();
+let myKeywords = [];
+let placeSelections = new Set();
+let busy = false;
+let lastError = null;
+
+/* ============================================================
+   STORAGE HELPERS
+============================================================ */
+async function safeGet(key, shared=false){
+  try{
+    const r = await window.storage.get(key, shared);
+    return r ? r.value : null;
+  }catch(e){ return null; }
+}
+async function safeSet(key, value, shared=false){
+  try{ await window.storage.set(key, value, shared); }catch(e){ console.error(e); }
+}
+
+function genCode(){
+  const chars='ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+  let s='';
+  for(let i=0;i<6;i++) s+=chars[Math.floor(Math.random()*chars.length)];
+  return s;
+}
+
+async function loadGroup(code){
+  const raw = await safeGet('group:'+code, true);
+  if(!raw) return null;
+  try{ return JSON.parse(raw); }catch(e){ return null; }
+}
+async function saveGroup(g){
+  await safeSet('group:'+g.code, JSON.stringify(g), true);
+}
+
+/* ============================================================
+   CLAUDE API CALL
+============================================================ */
+async function askClaude(systemPrompt, userPrompt){
+  const response = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: "claude-sonnet-4-6",
+      max_tokens: 1000,
+      system: systemPrompt,
+      messages: [{ role: "user", content: userPrompt }]
+    })
+  });
+  const data = await response.json();
+  const text = (data.content || [])
+    .filter(b => b.type === 'text')
+    .map(b => b.text).join('\n');
+  const clean = text.replace(/```json/g,'').replace(/```/g,'').trim();
+  return JSON.parse(clean);
+}
+
+/* ============================================================
+   INIT
+============================================================ */
+async function init(){
+  const savedName = await safeGet('profile:name', false);
+  if(savedName) profile = { name: savedName };
+  const lastCode = await safeGet('profile:lastGroup', false);
+  if(profile && lastCode){
+    const g = await loadGroup(lastCode);
+    if(g){ group = g; currentStep = 2; }
+  }
+  if(!profile) currentStep = 0;
+  else if(!group) currentStep = 1;
+  render();
+}
+
+/* ============================================================
+   RENDER ROOT
+============================================================ */
+function render(){
+  renderStepper();
+  const el = document.getElementById('screen');
+  el.innerHTML = '';
+  if(currentStep===0) renderLogin(el);
+  else if(currentStep===1) renderGroupChoice(el);
+  else if(currentStep===2) renderLobby(el);
+  else if(currentStep===3) renderMyInput(el);
+  else if(currentStep===4) renderAnalysis(el);
+  else if(currentStep===5) renderConfirm(el);
+  else if(currentStep===6) renderPlaces(el);
+  else if(currentStep===7) renderRoute(el);
+}
+
+function renderStepper(){
+  const wrap = document.getElementById('stepper');
+  wrap.innerHTML = STEP_LABELS.map((label,i)=>{
+    let cls = 'step-chip';
+    if(i===currentStep) cls+=' active';
+    else if(i<currentStep) cls+=' done';
+    return `<div class="${cls}">${i+1}. ${label}</div>`;
+  }).join('');
+}
+
+function esc(s){
+  return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+/* ============================================================
+   STEP 0 — 로그인
+============================================================ */
+function renderLogin(el){
+  el.innerHTML = `
+    <div class="card">
+      <span class="eyebrow">START</span>
+      <h2>닉네임으로 시작하기</h2>
+      <p class="subtext">별도 회원가입 없이, 친구들이 알아볼 수 있는 이름만 입력하면 돼요.</p>
+      <label>닉네임</label>
+      <input type="text" id="nameInput" placeholder="예: 정우" maxlength="12">
+      <div style="margin-top:18px;">
+        <button class="btn" onclick="submitLogin()">시작하기</button>
+      </div>
+    </div>
+  `;
+  document.getElementById('nameInput').addEventListener('keydown', e=>{ if(e.key==='Enter') submitLogin(); });
+}
+async function submitLogin(){
+  const v = document.getElementById('nameInput').value.trim();
+  if(!v) return;
+  profile = { name: v };
+  await safeSet('profile:name', v, false);
+  currentStep = 1;
+  render();
+}
+
+/* ============================================================
+   STEP 1 — 모임 생성 or 참여
+============================================================ */
+function renderGroupChoice(el){
+  el.innerHTML = `
+    <div class="card">
+      <span class="eyebrow">HI, ${esc(profile.name)}</span>
+      <h2>새 모임을 만들거나, 초대받은 코드로 들어가세요</h2>
+      <div class="row" style="margin-top:18px;">
+        <div>
+          <label>새 모임 이름</label>
+          <input type="text" id="groupTitle" placeholder="예: 여름 휴가 모임">
+          <button class="btn" style="margin-top:12px;" onclick="createGroup()">모임 만들기</button>
+        </div>
+        <div>
+          <label>초대 코드로 참여</label>
+          <input type="text" id="joinCode" placeholder="예: AB3K9F" maxlength="6" style="text-transform:uppercase;">
+          <button class="btn secondary" style="margin-top:12px;" onclick="joinGroup()">참여하기</button>
+        </div>
+      </div>
+      <div id="groupErr"></div>
+    </div>
+  `;
+}
+async function createGroup(){
+  const title = document.getElementById('groupTitle').value.trim() || '이름 없는 모임';
+  const code = genCode();
+  group = {
+    code, title, createdBy: profile.name, createdAt: Date.now(),
+    members: {},
+    ai: { dateAnalysis:null, confirmedDate:null, confirmedArea:null, confirmedTime:null, placeRecs:null, selectedPlaces:[], routeResult:null }
+  };
+  await saveGroup(group);
+  await safeSet('profile:lastGroup', code, false);
+  currentStep = 2;
+  render();
+}
+async function joinGroup(){
+  const code = document.getElementById('joinCode').value.trim().toUpperCase();
+  if(!code) return;
+  const g = await loadGroup(code);
+  const errEl = document.getElementById('groupErr');
+  if(!g){
+    errEl.innerHTML = `<div class="error-box">코드 ${esc(code)} 를 찾을 수 없어요. 코드를 다시 확인해주세요.</div>`;
+    return;
+  }
+  group = g;
+  await safeSet('profile:lastGroup', code, false);
+  currentStep = 2;
+  render();
+}
+
+/* ============================================================
+   STEP 2 — 모임 로비
+============================================================ */
+async function refreshGroup(){
+  const g = await loadGroup(group.code);
+  if(g) group = g;
+  render();
+}
+
+function renderLobby(el){
+  const members = group.members || {};
+  const names = Object.keys(members);
+  const total = names.length;
+  const doneCount = names.filter(n=>members[n].dates && members[n].dates.length>0).length;
+  const iSubmitted = members[profile.name] && members[profile.name].dates && members[profile.name].dates.length>0;
+  const shareLink = `앱 접속 후 초대 코드 입력 → ${group.code}`;
+
+  el.innerHTML = `
+    <div class="card">
+      <span class="eyebrow">GROUP LOBBY</span>
+      <h2>${esc(group.title)}</h2>
+      <p class="subtext">친구에게 아래 코드를 공유하고, 각자 가능한 날짜와 취향을 입력하게 하세요.</p>
+
+      <div class="code-box">
+        <div>
+          <div class="eyebrow" style="margin-bottom:4px;">초대 코드</div>
+          <div class="code">${group.code}</div>
+        </div>
+        <button class="btn small secondary" onclick="copyCode()">복사</button>
+      </div>
+      <p class="subtext" style="margin-top:10px;">공유 문구: "${shareLink}"</p>
+
+      <label style="margin-top:22px;">참여 현황 (${doneCount}/${total || 1}명 제출)</label>
+      ${names.length===0 ? `<div class="subtext">아직 아무도 일정을 입력하지 않았어요. 가장 먼저 입력해보세요!</div>` : ''}
+      ${names.map(n=>{
+        const m = members[n];
+        const done = m.dates && m.dates.length>0;
+        return `<div class="member">
+          <span>${esc(n)}${n===group.createdBy ? ' <span style="color:var(--muted);font-size:11px;">· 개설자</span>' : ''}</span>
+          <span class="badge ${done?'done':'pending'}">${done? '입력 완료' : '입력 중'}</span>
+        </div>`;
+      }).join('')}
+
+      <div class="row" style="margin-top:20px;">
+        <button class="btn" onclick="goToMyInput()">${iSubmitted? '내 일정 수정하기' : '내 일정 입력하기'}</button>
+        <button class="btn secondary" onclick="refreshGroup()">새로고침</button>
+      </div>
+      ${doneCount>=1 ? `<div style="margin-top:14px;"><button class="btn coral" onclick="currentStep=4; render();">AI로 최적 날짜·장소 찾기 →</button></div>` : ''}
+    </div>
+  `;
+}
+function copyCode(){
+  navigator.clipboard && navigator.clipboard.writeText(group.code).catch(()=>{});
+}
+function goToMyInput(){
+  const mine = group.members[profile.name];
+  mySelectedDates = new Set(mine && mine.dates ? mine.dates : []);
+  myKeywords = mine && mine.keywords ? [...mine.keywords] : [];
+  const now = new Date();
+  calCursorMonths = [
+    new Date(now.getFullYear(), now.getMonth(), 1),
+    new Date(now.getFullYear(), now.getMonth()+1, 1)
+  ];
+  currentStep = 3;
+  render();
+}
+
+/* ============================================================
+   STEP 3 — 내 일정 / 장소 / 키워드 입력
+============================================================ */
+function buildCalendarHTML(monthDate){
+  const y = monthDate.getFullYear(), m = monthDate.getMonth();
+  const first = new Date(y,m,1);
+  const startDow = first.getDay();
+  const daysInMonth = new Date(y,m+1,0).getDate();
+  const dows = ['일','월','화','수','목','금','토'];
+  let html = `<div class="cal-month-label">${y}년 ${m+1}월</div><div class="cal-grid">`;
+  html += dows.map(d=>`<div class="cal-dow">${d}</div>`).join('');
+  for(let i=0;i<startDow;i++) html += `<div class="cal-day empty"></div>`;
+  for(let d=1; d<=daysInMonth; d++){
+    const iso = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const sel = mySelectedDates.has(iso) ? ' selected' : '';
+    html += `<div class="cal-day${sel}" onclick="toggleDate('${iso}')">${d}</div>`;
+  }
+  html += `</div>`;
+  return html;
+}
+function toggleDate(iso){
+  if(mySelectedDates.has(iso)) mySelectedDates.delete(iso);
+  else mySelectedDates.add(iso);
+  render();
+}
+function addKeyword(){
+  const inp = document.getElementById('kwInput');
+  const v = inp.value.trim();
+  if(v && !myKeywords.includes(v)){ myKeywords.push(v); }
+  inp.value='';
+  render();
+  setTimeout(()=>{ const i=document.getElementById('kwInput'); if(i) i.focus(); },0);
+}
+function removeKeyword(idx){
+  myKeywords.splice(idx,1);
+  render();
+}
+
+function renderMyInput(el){
+  const mine = group.members[profile.name] || {};
+  el.innerHTML = `
+    <div class="card">
+      <span class="eyebrow">${esc(profile.name)}'S SCHEDULE</span>
+      <h2>가능한 날짜를 선택하세요</h2>
+      <p class="subtext">여러 날짜를 선택할수록 AI가 겹치는 날을 더 정확히 찾을 수 있어요.</p>
+      ${calCursorMonths.map(buildCalendarHTML).join('')}
+    </div>
+
+    <div class="card">
+      <h2>선호 지역 &amp; 시간대</h2>
+      <div class="row">
+        <div>
+          <label>내가 사는/출발하는 지역</label>
+          <input type="text" id="areaInput" placeholder="예: 강남, 분당, 인천" value="${esc(mine.area||'')}">
+        </div>
+        <div>
+          <label>선호 시간대</label>
+          <select id="timeInput">
+            <option value="오전" ${mine.timePref==='오전'?'selected':''}>오전</option>
+            <option value="점심" ${mine.timePref==='점심'?'selected':''}>점심</option>
+            <option value="오후" ${mine.timePref==='오후'?'selected':''}>오후</option>
+            <option value="저녁" ${(!mine.timePref||mine.timePref==='저녁')?'selected':''}>저녁</option>
+          </select>
+        </div>
+      </div>
+
+      <label>하고 싶은 / 가고 싶은 키워드</label>
+      <div class="chip-input-wrap">
+        ${myKeywords.map((k,i)=>`<span class="chip">${esc(k)} <button onclick="removeKeyword(${i})">×</button></span>`).join('')}
+        <input type="text" id="kwInput" placeholder="예: 카페투어, 서점, 산책" onkeydown="if(event.key==='Enter'){event.preventDefault();addKeyword();}">
+      </div>
+      <button class="btn ghost small" style="margin-top:8px;" onclick="addKeyword()">+ 키워드 추가</button>
+
+      <div class="footer-nav">
+        <button class="btn secondary" onclick="currentStep=2; render();">← 로비로</button>
+        <button class="btn" onclick="submitMyInput()">저장하고 로비로 돌아가기</button>
+      </div>
+    </div>
+  `;
+}
+async function submitMyInput(){
+  const area = document.getElementById('areaInput').value.trim() || '미입력';
+  const timePref = document.getElementById('timeInput').value;
+  group.members[profile.name] = {
+    area, timePref, keywords: myKeywords,
+    dates: Array.from(mySelectedDates).sort(),
+    joinedAt: Date.now()
+  };
+  await saveGroup(group);
+  currentStep = 2;
+  render();
+}
+
+/* ============================================================
+   VENN VISUAL (SVG) — used in analysis/results
+============================================================ */
+function vennSVG(labelLeft, labelRight, overlapLabel){
+  return `
+  <div class="venn-wrap">
+    <svg width="260" height="160" viewBox="0 0 260 160">
+      <circle cx="100" cy="80" r="62" fill="var(--coral)" opacity="0.55"/>
+      <circle cx="160" cy="80" r="62" fill="var(--mint)" opacity="0.55"/>
+      <text x="62" y="84" fill="#fff" font-size="12" font-family="Noto Sans KR" text-anchor="middle">${esc(labelLeft)}</text>
+      <text x="198" y="84" fill="#0d1a17" font-size="12" font-family="Noto Sans KR" text-anchor="middle">${esc(labelRight)}</text>
+      <text x="130" y="84" fill="#12162A" font-weight="700" font-size="13" font-family="Noto Sans KR" text-anchor="middle">${esc(overlapLabel)}</text>
+    </svg>
+  </div>`;
+}
+
+/* ============================================================
+   STEP 4 — AI 분석 (날짜/시간/지역)
+============================================================ */
+function renderAnalysis(el){
+  const members = group.members || {};
+  const names = Object.keys(members);
+
+  el.innerHTML = `
+    <div class="card">
+      <span class="eyebrow">AI ANALYSIS</span>
+      <h2>모두의 일정이 겹치는 날을 찾을게요</h2>
+      <p class="subtext">${names.length}명의 가능한 날짜, 지역, 시간대, 키워드를 종합해 AI가 최적의 날짜·시간·중간 지역을 추천합니다.</p>
+      ${vennSVG('내 일정','친구 일정','겹치는 날')}
+      <div id="analysisBody"></div>
+    </div>
+  `;
+
+  const body = document.getElementById('analysisBody');
+  if(group.ai.dateAnalysis){
+    renderAnalysisResult(body, group.ai.dateAnalysis);
+  } else {
+    body.innerHTML = `<div style="text-align:center;"><button class="btn coral" onclick="runDateAnalysis()">AI 분석 시작하기</button></div>`;
+  }
+}
+
+async function runDateAnalysis(){
+  const body = document.getElementById('analysisBody');
+  body.innerHTML = `<div class="loading"><span class="spinner"></span> 겹치는 날짜와 중간 지역을 계산하는 중…</div>`;
+  try{
+    const members = group.members;
+    const payload = Object.entries(members).map(([name,m])=>({
+      name, area:m.area, timePref:m.timePref, keywords:m.keywords, availableDates:m.dates
+    }));
+    const system = `당신은 친구 모임의 날짜·시간·장소 조율 도우미입니다. 반드시 JSON만 응답하고, 다른 텍스트나 코드블록 표시는 포함하지 마세요. 스키마:
+{
+ "recommendedDate": "YYYY-MM-DD",
+ "alternativeDates": ["YYYY-MM-DD", ...],
+ "recommendedArea": "지역명(예: 홍대, 강남 등 여러 멤버 지역의 절충 지점 추정)",
+ "recommendedTime": "시간대",
+ "reasoning": "왜 이 날짜/지역/시간이 좋은지 2~3문장 설명",
+ "styleTip": "계절과 시간대를 고려한 옷차림/준비물 팁 1~2문장"
+}`;
+    const user = `멤버별 데이터(JSON): ${JSON.stringify(payload)}
+오늘 날짜: ${new Date().toISOString().slice(0,10)}
+가장 많은 인원이 겹치는 날짜를 최우선으로 고르고, 겹치는 날짜가 없다면 가장 근접한 날짜를 추천하세요. 지역은 멤버들의 area 값을 참고해 서울/수도권 기준으로 합리적인 중간 지점을 추정하세요.`;
+    const result = await askClaude(system, user);
+    group.ai.dateAnalysis = result;
+    await saveGroup(group);
+    renderAnalysisResult(document.getElementById('analysisBody'), result);
+  }catch(e){
+    document.getElementById('analysisBody').innerHTML = `<div class="error-box">분석 중 오류가 발생했어요. 다시 시도해주세요.</div>
+    <button class="btn secondary small" style="margin-top:10px;" onclick="runDateAnalysis()">다시 시도</button>`;
+  }
+}
+
+function renderAnalysisResult(body, r){
+  body.innerHTML = `
+    <div class="result-grid">
+      <div class="result-tile"><div class="k">추천 날짜</div><div class="v">${esc(r.recommendedDate)}</div></div>
+      <div class="result-tile"><div class="k">추천 시간대</div><div class="v">${esc(r.recommendedTime)}</div></div>
+      <div class="result-tile"><div class="k">추천 지역</div><div class="v">${esc(r.recommendedArea)}</div></div>
+      <div class="result-tile"><div class="k">대안 날짜</div><div class="v" style="font-size:13px;">${(r.alternativeDates||[]).map(esc).join(', ') || '-'}</div></div>
+    </div>
+    <div class="reasoning">💡 ${esc(r.reasoning)}</div>
+    <div class="reasoning" style="border-color:var(--mint); margin-top:10px;">🧥 ${esc(r.styleTip)}</div>
+    <div class="footer-nav">
+      <button class="btn secondary" onclick="currentStep=2; render();">← 로비로</button>
+      <button class="btn" onclick="goToConfirm()">이 결과로 날짜 확정하기 →</button>
+    </div>
+  `;
+}
+function goToConfirm(){ currentStep = 5; render(); }
+
+/* ============================================================
+   STEP 5 — 최종 확정
+============================================================ */
+function renderConfirm(el){
+  const r = group.ai.dateAnalysis || {};
+  el.innerHTML = `
+    <div class="card">
+      <span class="eyebrow">FINALIZE</span>
+      <h2>날짜·지역을 확정할게요</h2>
+      <p class="subtext">AI 추천값을 그대로 쓰거나, 필요하면 직접 수정한 뒤 확정하세요.</p>
+      <label>확정 날짜</label>
+      <input type="text" id="confDate" value="${esc(group.ai.confirmedDate || r.recommendedDate || '')}">
+      <label>확정 지역</label>
+      <input type="text" id="confArea" value="${esc(group.ai.confirmedArea || r.recommendedArea || '')}">
+      <label>확정 시간대</label>
+      <input type="text" id="confTime" value="${esc(group.ai.confirmedTime || r.recommendedTime || '')}">
+      <div class="footer-nav">
+        <button class="btn secondary" onclick="currentStep=4; render();">← 분석으로</button>
+        <button class="btn coral" onclick="confirmFinal()">확정하고 장소 추천 받기 →</button>
+      </div>
+    </div>
+  `;
+}
+async function confirmFinal(){
+  group.ai.confirmedDate = document.getElementById('confDate').value.trim();
+  group.ai.confirmedArea = document.getElementById('confArea').value.trim();
+  group.ai.confirmedTime = document.getElementById('confTime').value.trim();
+  await saveGroup(group);
+  currentStep = 6;
+  render();
+}
+
+/* ============================================================
+   STEP 6 — 장소 추천
+============================================================ */
+function renderPlaces(el){
+  el.innerHTML = `
+    <div class="card">
+      <span class="eyebrow">PLACE MATCH</span>
+      <h2>${esc(group.ai.confirmedArea)} 근처, 취향에 맞는 장소</h2>
+      <p class="subtext">${esc(group.ai.confirmedDate)} · ${esc(group.ai.confirmedTime)} 기준으로, 멤버들이 입력한 키워드를 반영해 추천해요.</p>
+      <div id="placesBody"></div>
+    </div>
+  `;
+  const body = document.getElementById('placesBody');
+  if(group.ai.placeRecs){
+    renderPlaceCards(body, group.ai.placeRecs);
+  } else {
+    body.innerHTML = `<div style="text-align:center;"><button class="btn coral" onclick="runPlaceRec()">AI 장소 추천 받기</button></div>`;
+  }
+}
+async function runPlaceRec(){
+  const body = document.getElementById('placesBody');
+  body.innerHTML = `<div class="loading"><span class="spinner"></span> 어울리는 장소를 찾는 중…</div>`;
+  try{
+    const allKeywords = Object.values(group.members).flatMap(m=>m.keywords||[]);
+    const system = `당신은 지역 기반 장소 추천 도우미입니다. 실제 지명을 확신할 수 없으므로 "실제로 존재할 법한 일반적인 장소 유형과 설명"을 제안하고, 사용자가 직접 지도 앱에서 검색해 확인해야 함을 전제로 답하세요. 반드시 JSON 배열만 응답(다른 텍스트 금지). 스키마:
+[{"name":"장소 컨셉 이름","category":"카페/서점/산책로 등 분류","description":"1문장 설명","whyFit":"이 모임 키워드와 왜 어울리는지 1문장"}]
+5개에서 10개 사이로 제안하세요.`;
+    const user = `지역: ${group.ai.confirmedArea}
+날짜: ${group.ai.confirmedDate}
+시간대: ${group.ai.confirmedTime}
+멤버들이 원하는 키워드: ${JSON.stringify(allKeywords)}`;
+    const result = await askClaude(system, user);
+    group.ai.placeRecs = result;
+    await saveGroup(group);
+    renderPlaceCards(document.getElementById('placesBody'), result);
+  }catch(e){
+    document.getElementById('placesBody').innerHTML = `<div class="error-box">장소 추천 중 오류가 발생했어요.</div>
+    <button class="btn secondary small" style="margin-top:10px;" onclick="runPlaceRec()">다시 시도</button>`;
+  }
+}
+function renderPlaceCards(body, places){
+  placeSelections = new Set(group.ai.selectedPlaces || []);
+  body.innerHTML = `
+    <div class="place-grid">
+      ${places.map((p,i)=>`
+        <div class="place-card ${placeSelections.has(i)?'selected':''}" onclick="togglePlace(${i})">
+          <div class="cat">${esc(p.category)}</div>
+          <h3>${esc(p.name)}</h3>
+          <p>${esc(p.description)}</p>
+          <p style="margin-top:6px; color:var(--mint);">${esc(p.whyFit)}</p>
+        </div>
+      `).join('')}
+    </div>
+    <div class="footer-nav">
+      <button class="btn secondary" onclick="currentStep=5; render();">← 확정으로</button>
+      <button class="btn" ${placeSelections.size===0?'disabled':''} onclick="goRoute()">선택한 장소로 동선 짜기 (${placeSelections.size}) →</button>
+    </div>
+  `;
+}
+function togglePlace(i){
+  if(placeSelections.has(i)) placeSelections.delete(i);
+  else placeSelections.add(i);
+  renderPlaceCards(document.getElementById('placesBody'), group.ai.placeRecs);
+}
+async function goRoute(){
+  group.ai.selectedPlaces = Array.from(placeSelections);
+  await saveGroup(group);
+  currentStep = 7;
+  render();
+}
+
+/* ============================================================
+   STEP 7 — 동선 & 스타일 추천
+============================================================ */
+function renderRoute(el){
+  el.innerHTML = `
+    <div class="card">
+      <span class="eyebrow">ROUTE &amp; STYLE</span>
+      <h2>최적 동선과 장소별 꾸밈 팁</h2>
+      <p class="subtext">선택한 장소를 방문하기 좋은 순서와, 장소 분위기에 맞는 스타일 팁을 제안해요.</p>
+      <div id="routeBody"></div>
+    </div>
+  `;
+  const body = document.getElementById('routeBody');
+  if(group.ai.routeResult){
+    renderRouteResult(body, group.ai.routeResult);
+  } else {
+    body.innerHTML = `<div style="text-align:center;"><button class="btn coral" onclick="runRoute()">AI 동선 추천 받기</button></div>`;
+  }
+}
+async function runRoute(){
+  const body = document.getElementById('routeBody');
+  body.innerHTML = `<div class="loading"><span class="spinner"></span> 동선을 정리하는 중…</div>`;
+  try{
+    const selected = group.ai.selectedPlaces.map(i=>group.ai.placeRecs[i]);
+    const system = `당신은 하루 일정 동선 플래너입니다. 반드시 JSON만 응답하세요(다른 텍스트 금지). 스키마:
+{"orderedPlaces":[{"name":"장소이름","order":1,"tip":"이동/체류 팁 1문장","styleTip":"이 장소 분위기에 맞는 옷차림/꾸밈 팁 1문장"}],"overallTip":"하루 전체에 대한 종합 팁 1~2문장"}`;
+    const user = `방문할 장소 목록: ${JSON.stringify(selected)}
+날짜: ${group.ai.confirmedDate}, 시간대: ${group.ai.confirmedTime}, 지역: ${group.ai.confirmedArea}
+자연스러운 동선 순서(예: 가벼운 곳→식사→카페→산책 등 일반적 흐름)를 고려해 정렬하세요.`;
+    const result = await askClaude(system, user);
+    group.ai.routeResult = result;
+    await saveGroup(group);
+    renderRouteResult(document.getElementById('routeBody'), result);
+  }catch(e){
+    document.getElementById('routeBody').innerHTML = `<div class="error-box">동선 추천 중 오류가 발생했어요.</div>
+    <button class="btn secondary small" style="margin-top:10px;" onclick="runRoute()">다시 시도</button>`;
+  }
+}
+function renderRouteResult(body, r){
+  body.innerHTML = `
+    ${(r.orderedPlaces||[]).sort((a,b)=>a.order-b.order).map(p=>`
+      <div class="route-item">
+        <div class="route-num">${p.order}</div>
+        <div>
+          <h3>${esc(p.name)}</h3>
+          <p>${esc(p.tip)}</p>
+          <p class="style-tip">🧥 ${esc(p.styleTip)}</p>
+        </div>
+      </div>
+    `).join('')}
+    <div class="reasoning" style="margin-top:16px;">✨ ${esc(r.overallTip)}</div>
+    <div class="footer-nav">
+      <button class="btn secondary" onclick="currentStep=6; render();">← 장소로</button>
+      <button class="btn" onclick="currentStep=2; render();">모임 로비로 돌아가기</button>
+    </div>
+  `;
+}
+
+/* ============================================================
+   BOOT
+============================================================ */
+init();
+</script>
+</body>
+</html>
