@@ -10,20 +10,20 @@
 
 <style>
   :root{
-    --bg-navy:#1c1830;
-    --bg-navy-deep:#141127;
+    --bg-navy:#fae8fb;
+    --bg-navy-deep:#f2dcf3;
     --card:#ffffff;
-    --card-cream:#fdf6ec;
+    --card-cream:#c3d9c3;
     --ink:#221f36;
     --ink-soft:#6b6785;
-    --accent:#f2a65a;
-    --accent-deep:#e88f3a;
-    --accent-soft:#fbe4c9;
-    --accent2:#7c6df2;
-    --line:#eee7f5;
-    --danger:#e0603f;
-    --shadow-soft: 0 8px 24px rgba(28,24,48,.08);
-    --shadow-lift: 0 14px 34px rgba(28,24,48,.14);
+    --accent:#f4d9f3;
+    --accent-deep:#e8c6e7;
+    --accent-soft:#e2efe2;
+    --accent2:#f4d9f3;
+    --line:#dcdcdc;
+    --danger:#bb7adc;
+    --shadow-soft: 0 8px 24px rgba(0,0,0,.04);
+    --shadow-lift: 0 14px 34px rgba(0, 0, 0, 0.385);
   }
   *{box-sizing:border-box;}
   body{
@@ -77,7 +77,7 @@
     align-items:center;
     gap:4px;
     background:var(--accent-soft);
-    color:var(--accent-deep);
+    color:var(--accent-ink);
     font-size:11px;
     font-weight:800;
     padding:5px 12px;
@@ -99,7 +99,7 @@
     transition:border-color .15s, box-shadow .15s;
     font-family:inherit;
   }
-  input:focus{border-color:var(--accent);box-shadow:0 0 0 4px rgba(242,166,90,.15);}
+  input:focus{border-color:var(--accent);box-shadow:0 0 0 4px rgba(0,0,0,.04);}
   label.small{font-size:12px;color:var(--ink-soft);display:block;margin:-4px 0 6px 2px;}
 
   button{
@@ -116,7 +116,7 @@
   button.primary{
     background:linear-gradient(135deg, var(--accent) 0%, var(--accent-deep) 100%);
     color:#2b1c08;width:100%;
-    box-shadow:0 8px 18px rgba(232,143,58,.35);
+    box-shadow:0 8px 18px rgba(0,0,0,.04);
   }
   button.primary:hover{filter:brightness(1.05);}
   button.dark{
