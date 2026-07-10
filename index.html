@@ -219,10 +219,78 @@
 
   ::-webkit-scrollbar{width:6px;height:6px;}
   ::-webkit-scrollbar-thumb{background:var(--line);border-radius:10px;}
+
+  /* 토스트 알림 */
+  #toastStack{
+    position:absolute;top:14px;left:14px;right:14px;z-index:50;
+    display:flex;flex-direction:column;gap:8px;pointer-events:none;
+  }
+  .toast{
+    background:var(--ink);color:#fff;
+    padding:10px 14px;border-radius:12px;font-size:12.5px;font-weight:700;
+    box-shadow:0 10px 24px rgba(0,0,0,.3);
+    opacity:0;transform:translateY(-8px);
+    animation:toastIn .25s ease forwards, toastOut .3s ease forwards 2.7s;
+  }
+  @keyframes toastIn{to{opacity:1;transform:translateY(0);}}
+  @keyframes toastOut{to{opacity:0;transform:translateY(-8px);}}
+
+  /* 확정 배너 */
+  .confirm-banner{
+    background:linear-gradient(135deg,#2c2745,var(--ink));
+    color:#fff;border-radius:18px;padding:16px;margin-bottom:16px;
+    box-shadow:var(--shadow-lift);
+  }
+  .confirm-banner .badge{background:rgba(255,255,255,.15);color:#ffd9a8;}
+  .confirm-banner .line{font-size:13px;margin:4px 0;opacity:.95;}
+  .confirm-banner .line strong{color:var(--accent);}
+
+  /* 투표 */
+  .vote-row{display:flex;align-items:center;gap:8px;margin-top:8px;}
+  button.vote-btn{
+    background:#fff;border:1.5px solid var(--line);color:var(--ink);
+    padding:8px 12px;font-size:12.5px;border-radius:999px;font-weight:700;
+  }
+  button.vote-btn.voted{background:var(--accent-soft);border-color:var(--accent);color:var(--accent-deep);}
+  .vote-count{font-size:12px;color:var(--ink-soft);font-weight:700;}
+
+  /* 채팅 */
+  #chatMessages{
+    max-height:220px;overflow-y:auto;
+    display:flex;flex-direction:column;gap:8px;margin-bottom:10px;padding-right:2px;
+  }
+  .chat-bubble{
+    background:var(--card-cream);border-radius:14px;padding:8px 12px;
+    font-size:13px;max-width:85%;align-self:flex-start;
+    border:1px solid var(--line);
+  }
+  .chat-bubble.me{align-self:flex-end;background:var(--accent-soft);border-color:var(--accent);}
+  .chat-bubble .chat-user{font-size:11px;font-weight:800;color:var(--ink-soft);margin-bottom:2px;}
+  .chat-bubble.me .chat-user{color:var(--accent-deep);}
+
+  /* 요약 카드 */
+  .summary-card{
+    background:linear-gradient(180deg,#fff, var(--card-cream));
+    border:1.5px solid var(--accent-soft);
+  }
+  .weather-box{
+    display:flex;gap:14px;align-items:center;margin-top:8px;
+    background:var(--card-cream);border-radius:14px;padding:12px;
+  }
+  .weather-box .temp{font-size:20px;font-weight:800;color:var(--ink);}
+  .weather-box .desc{font-size:12px;color:var(--ink-soft);}
+
+  /* 내 모임 목록 */
+  .my-group-item{
+    display:flex;justify-content:space-between;align-items:center;
+    background:var(--card-cream);border-radius:14px;padding:10px 12px;margin-bottom:8px;
+  }
+  .my-group-item .name{font-weight:800;font-size:13px;color:var(--ink);}
 </style>
 </head>
 <body>
 <div id="phone"><div id="screen">
+  <div id="toastStack"></div>
 
   <!-- ===================== 로그인 / 회원가입 ===================== -->
   <div id="authArea">
@@ -269,11 +337,34 @@
       <button class="dark" onclick="joinGroup()">참여하기</button>
     </div>
 
+    <div class="card">
+      <h3>🗂️ 내 모임 목록</h3>
+      <p style="margin-bottom:8px;">지금까지 참여한 그룹이에요. 눌러서 바로 이동할 수 있어요.</p>
+      <div id="myGroupsList"><div class="empty">아직 참여한 그룹이 없어요.</div></div>
+    </div>
+
     <!-- 주소 입력 + 참여자 + 추천 -->
     <div id="actionArea">
       <div class="card" id="inviteBannerCard" style="display:none;">
         <span class="badge alt">💌 초대받았어요</span>
         <p style="margin-bottom:0;" id="inviteBannerText"></p>
+      </div>
+
+      <div id="confirmBanner" style="display:none;"></div>
+
+      <div class="card summary-card" id="summaryCard" style="display:none;">
+        <h3>📋 모임 요약</h3>
+        <div id="summaryContent"></div>
+        <button class="dark" style="margin-top:10px;" onclick="copySummary()">📋 요약 복사하기</button>
+      </div>
+
+      <div class="card">
+        <h3>💬 그룹 채팅 / 메모</h3>
+        <div id="chatMessages"></div>
+        <div class="row">
+          <input type="text" id="chatInput" placeholder="메시지를 입력하세요">
+          <button class="primary" style="flex:0 0 80px;" onclick="sendMessage()">전송</button>
+        </div>
       </div>
 
       <div class="card">
@@ -325,6 +416,13 @@
       <div class="card">
         <h3>📍 AI 중간 장소 추천</h3>
         <p style="margin-bottom:8px;">멤버들의 주소와 원하는 카테고리를 바탕으로 중간 지점 근처의 장소를 찾아드려요.</p>
+        <label class="small">가격대 (선택)</label>
+        <select id="priceGroupPref" style="width:100%;border:1.5px solid var(--line);border-radius:13px;padding:12px 14px;font-size:14px;margin-bottom:10px;font-family:inherit;background:#fff;">
+          <option value="">전체</option>
+          <option value="가성비">가성비 위주</option>
+          <option value="맛집">맛집(평 좋은 곳)</option>
+          <option value="프리미엄">프리미엄/고급</option>
+        </select>
         <button class="primary" onclick="recommendLocation()">중간 장소 추천받기</button>
         <div id="resultArea"></div>
       </div>
@@ -336,6 +434,13 @@
           <input type="text" id="compareA" placeholder="예: 치킨">
           <input type="text" id="compareB" placeholder="예: 떡볶이">
         </div>
+        <label class="small">가격대 (선택)</label>
+        <select id="priceComparePref" style="width:100%;border:1.5px solid var(--line);border-radius:13px;padding:12px 14px;font-size:14px;margin-bottom:10px;font-family:inherit;background:#fff;">
+          <option value="">전체</option>
+          <option value="가성비">가성비 위주</option>
+          <option value="맛집">맛집(평 좋은 곳)</option>
+          <option value="프리미엄">프리미엄/고급</option>
+        </select>
         <button class="dark" onclick="compareCategories()">비교하기</button>
         <div id="compareArea"></div>
       </div>
@@ -346,7 +451,7 @@
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, collection, addDoc, query, where, onSnapshot, getDocs, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, query, where, onSnapshot, getDocs, doc, getDoc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
     import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
     const firebaseConfig = {
@@ -367,6 +472,15 @@
     let currentGroupName = "";
     let currentGroupId = "";
     let lastParticipants = []; // cache of {user, address, lat, lng, categories}
+
+    let groupUnsub = null;       // groups/{id} 실시간 구독 해제 함수
+    let messagesUnsub = null;    // Messages 실시간 구독 해제 함수
+    let votesUnsub = null;       // Votes 실시간 구독 해제 함수
+    let voteCounts = {};         // { placeName: count }
+    let myVotes = new Set();     // 내가 투표한 placeName들
+    let lastMessageCount = 0;    // 새 채팅 도착 감지용
+    let currentGroupData = { confirmedDate: null, confirmedPlace: null }; // groups 문서 캐시
+    let prevParticipantCount = 0; // 새 멤버 참여 감지용
 
     // -------------------- 초대 링크로 들어온 경우 감지 --------------------
     const urlParams = new URLSearchParams(window.location.search);
@@ -416,10 +530,23 @@
         return map[e.code] || e.message;
     }
 
+    // -------------------- 토스트 알림 --------------------
+    function showToast(message) {
+        const stack = document.getElementById("toastStack");
+        if (!stack) return;
+        const el = document.createElement("div");
+        el.className = "toast";
+        el.innerText = message;
+        stack.appendChild(el);
+        setTimeout(() => el.remove(), 3000);
+    }
+
     async function enterService() {
         document.getElementById("authArea").style.display = "none";
         document.getElementById("mainServiceArea").style.display = "block";
         document.getElementById("whoAmI").innerText = currentUserNickname ? `${currentUserNickname}님` : "";
+
+        loadMyGroups();
 
         if (pendingInviteGroupId) {
             await joinGroupById(pendingInviteGroupId, true);
@@ -488,6 +615,13 @@
         document.getElementById("resultArea").innerHTML = "";
         document.getElementById("compareArea").innerHTML = "";
         document.getElementById("dateResultArea").innerHTML = "";
+        document.getElementById("chatMessages").innerHTML = "";
+        document.getElementById("summaryCard").style.display = "none";
+        document.getElementById("confirmBanner").style.display = "none";
+        lastMessageCount = 0;
+        prevParticipantCount = 0;
+        voteCounts = {};
+        myVotes = new Set();
 
         const banner = document.getElementById("inviteBannerCard");
         if (fromInvite) {
@@ -501,10 +635,103 @@
         renderCalendar();
         loadParticipants();
         loadMyAvailability();
+        recordMembership(groupId, name);
+        subscribeToGroupDoc(groupId);
+        subscribeToMessages(groupId);
+        subscribeToVotes(groupId);
 
         if (fromInvite) {
             document.getElementById("actionArea").scrollIntoView({ behavior: "smooth", block: "start" });
         }
+    }
+
+    // -------------------- 내 모임 목록 --------------------
+    async function recordMembership(groupId, groupName) {
+        try {
+            const q = query(
+                collection(db, "Membership"),
+                where("groupId", "==", groupId),
+                where("user", "==", currentUserNickname)
+            );
+            const snap = await getDocs(q);
+            if (snap.empty) {
+                await addDoc(collection(db, "Membership"), { groupId, groupName, user: currentUserNickname });
+            }
+            loadMyGroups();
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    async function loadMyGroups() {
+        const box = document.getElementById("myGroupsList");
+        if (!box || !currentUserNickname) return;
+        try {
+            const q = query(collection(db, "Membership"), where("user", "==", currentUserNickname));
+            const snap = await getDocs(q);
+            if (snap.empty) {
+                box.innerHTML = `<div class="empty">아직 참여한 그룹이 없어요.</div>`;
+                return;
+            }
+            const seen = new Set();
+            let html = "";
+            snap.forEach(d => {
+                const data = d.data();
+                if (seen.has(data.groupId)) return;
+                seen.add(data.groupId);
+                html += `
+                    <div class="my-group-item">
+                        <span class="name">${escapeHtml(data.groupName)}</span>
+                        <button class="chip" type="button" onclick="jumpToGroup('${data.groupId}','${escapeHtml(data.groupName).replace(/'/g, "\\'")}')">이동하기 →</button>
+                    </div>`;
+            });
+            box.innerHTML = html || `<div class="empty">아직 참여한 그룹이 없어요.</div>`;
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    window.jumpToGroup = async (groupId, groupName) => {
+        await enterGroup(groupId, groupName, false);
+        document.getElementById("actionArea").scrollIntoView({ behavior: "smooth", block: "start" });
+    };
+
+    // -------------------- 그룹 문서 실시간 구독 (확정 날짜/장소, 새 멤버 알림) --------------------
+    function subscribeToGroupDoc(groupId) {
+        if (groupUnsub) groupUnsub();
+        groupUnsub = onSnapshot(doc(db, "groups", groupId), (snap) => {
+            if (!snap.exists()) return;
+            const data = snap.data();
+            const prev = currentGroupData;
+
+            if (data.confirmedDate && data.confirmedDate !== prev.confirmedDate) {
+                showToast(`📅 모임 날짜가 ${formatDateKey(data.confirmedDate)}로 확정되었어요!`);
+            }
+            if (data.confirmedPlace && (!prev.confirmedPlace || data.confirmedPlace.name !== prev.confirmedPlace.name)) {
+                showToast(`📍 모임 장소가 "${data.confirmedPlace.name}"으로 확정되었어요!`);
+            }
+
+            currentGroupData = { confirmedDate: data.confirmedDate || null, confirmedPlace: data.confirmedPlace || null };
+            renderConfirmBanner();
+            renderSummaryCard();
+        });
+    }
+
+    function renderConfirmBanner() {
+        const el = document.getElementById("confirmBanner");
+        const { confirmedDate, confirmedPlace } = currentGroupData;
+        if (!confirmedDate && !confirmedPlace) {
+            el.style.display = "none";
+            el.innerHTML = "";
+            return;
+        }
+        el.style.display = "block";
+        el.innerHTML = `
+            <div class="confirm-banner">
+                <span class="badge">✅ 모임 확정 정보</span>
+                ${confirmedDate ? `<div class="line">📅 날짜: <strong>${escapeHtml(formatDateKey(confirmedDate))}</strong></div>` : `<div class="line">📅 날짜: 아직 미정</div>`}
+                ${confirmedPlace ? `<div class="line">📍 장소: <strong>${escapeHtml(confirmedPlace.name)}</strong> (${escapeHtml(confirmedPlace.address || "")})</div>` : `<div class="line">📍 장소: 아직 미정</div>`}
+            </div>`;
     }
 
     // -------------------- 주소 저장 (지오코딩 포함) --------------------
@@ -553,6 +780,7 @@
             if (snapshot.empty) {
                 list.innerHTML = `<div class="empty">아직 등록된 멤버가 없어요.</div>`;
                 updateMapView([], null);
+                if (prevParticipantCount > 0) prevParticipantCount = 0;
                 return;
             }
             snapshot.forEach((doc) => {
@@ -568,6 +796,10 @@
                     </div>`;
                 list.appendChild(li);
             });
+            if (prevParticipantCount > 0 && lastParticipants.length > prevParticipantCount) {
+                showToast("👋 새 멤버가 참여했어요!");
+            }
+            prevParticipantCount = lastParticipants.length;
             updateMapView(lastParticipants, computeMidpoint(lastParticipants));
         });
     }
@@ -605,6 +837,7 @@
         const idx = lastPlaces.length;
         lastPlaces.push({
             name: place.place_name,
+            address: place.road_address_name || place.address_name || "",
             lat: parseFloat(place.y),
             lng: parseFloat(place.x)
         });
@@ -771,6 +1004,9 @@
 
     function placeCardHtml(place) {
         const idx = registerPlace(place);
+        const name = place.place_name;
+        const voteCount = voteCounts[name] || 0;
+        const voted = myVotes.has(name);
         return `
             <div class="place-card">
                 <div class="name">${escapeHtml(place.place_name)}</div>
@@ -778,8 +1014,13 @@
                 <div class="addr">${escapeHtml(place.road_address_name || place.address_name)}</div>
                 <div class="addr">중간 지점에서 약 ${place.distance ? Math.round(place.distance) + "m" : "-"}</div>
                 <a href="${place.place_url}" target="_blank" rel="noopener">카카오맵에서 리뷰 보기 →</a>
-                <div style="margin-top:8px;">
+                <div class="vote-row">
+                    <button class="vote-btn${voted ? " voted" : ""}" type="button" data-vote-name="${escapeHtml(name)}" onclick="toggleVote(${idx})">👍 투표${voted ? "함" : "하기"}</button>
+                    <span class="vote-count" data-vote-count-name="${escapeHtml(name)}">${voteCount}표</span>
+                </div>
+                <div class="row" style="margin-top:8px;">
                     <button class="chip" type="button" onclick="showRouteToPlace(${idx})">🚗 동선 보기</button>
+                    <button class="chip" type="button" onclick="confirmPlace(${idx})">✅ 이 장소로 확정</button>
                 </div>
             </div>`;
     }
@@ -798,10 +1039,12 @@
 
         let categories = [...new Set(lastParticipants.flatMap(p => p.categories || []))];
         if (categories.length === 0) categories = ["맛집", "카페"]; // 기본값
+        const pricePref = document.getElementById("priceGroupPref").value;
 
         let html = `<div class="lead">중간 지점 근처, 멤버들이 원한 카테고리 기준 추천이에요.</div>`;
         for (const cat of categories) {
-            const places = await searchPlaces(cat, mid.lat, mid.lng);
+            const keyword = pricePref ? `${cat} ${pricePref}` : cat;
+            const places = await searchPlaces(keyword, mid.lat, mid.lng);
             html += `<h3 style="margin-top:12px;">${escapeHtml(cat)}</h3>`;
             if (places.length === 0) {
                 html += `<div class="empty">근처에서 "${escapeHtml(cat)}" 관련 장소를 찾지 못했어요.</div>`;
@@ -827,10 +1070,11 @@
         lastPlaces = [];
         clearRouteLines();
         document.getElementById("routeArea").innerHTML = "";
+        const pricePref = document.getElementById("priceComparePref").value;
 
         const [placesA, placesB] = await Promise.all([
-            searchPlaces(catA, mid.lat, mid.lng),
-            searchPlaces(catB, mid.lat, mid.lng)
+            searchPlaces(pricePref ? `${catA} ${pricePref}` : catA, mid.lat, mid.lng),
+            searchPlaces(pricePref ? `${catB} ${pricePref}` : catB, mid.lat, mid.lng)
         ]);
 
         const colHtml = (label, places) => {
@@ -992,6 +1236,9 @@
                         <div class="name">${idx + 1}위 · ${escapeHtml(formatDateKey(r.dateKey))}${isFull ? " 🎉 전원 가능" : ""}</div>
                         <div class="cat">${r.count}/${totalMembers}명 가능</div>
                         <div class="addr">${r.people.map(escapeHtml).join(", ")}</div>
+                        <div style="margin-top:8px;">
+                            <button class="chip" type="button" onclick="confirmDate('${r.dateKey}')">✅ 이 날짜로 확정</button>
+                        </div>
                     </div>`;
             });
             resultArea.innerHTML = html;
@@ -1007,6 +1254,198 @@
         const weekLabels = ["일", "월", "화", "수", "목", "금", "토"];
         return `${y}년 ${m}월 ${d}일 (${weekLabels[dt.getDay()]})`;
     }
+
+    // -------------------- 최종 확정 --------------------
+    window.confirmDate = async (dateKey) => {
+        if (!currentGroupId) return;
+        try {
+            await updateDoc(doc(db, "groups", currentGroupId), { confirmedDate: dateKey });
+            alert(`모임 날짜가 ${formatDateKey(dateKey)}로 확정되었어요!`);
+        } catch (e) {
+            console.error(e);
+            alert("날짜 확정에 실패했어요: " + e.message);
+        }
+    };
+
+    window.confirmPlace = async (idx) => {
+        if (!currentGroupId) return;
+        const place = lastPlaces[idx];
+        if (!place) return;
+        try {
+            await updateDoc(doc(db, "groups", currentGroupId), {
+                confirmedPlace: { name: place.name, address: place.address, lat: place.lat, lng: place.lng }
+            });
+            alert(`모임 장소가 "${place.name}"으로 확정되었어요!`);
+        } catch (e) {
+            console.error(e);
+            alert("장소 확정에 실패했어요: " + e.message);
+        }
+    };
+
+    // -------------------- 투표 --------------------
+    function subscribeToVotes(groupId) {
+        if (votesUnsub) votesUnsub();
+        const q = query(collection(db, "Votes"), where("groupId", "==", groupId));
+        votesUnsub = onSnapshot(q, (snap) => {
+            const counts = {};
+            const mine = new Set();
+            snap.forEach(d => {
+                const v = d.data();
+                counts[v.placeName] = (counts[v.placeName] || 0) + 1;
+                if (v.user === currentUserNickname) mine.add(v.placeName);
+            });
+            voteCounts = counts;
+            myVotes = mine;
+            refreshVoteDisplays();
+        });
+    }
+
+    function refreshVoteDisplays() {
+        document.querySelectorAll("[data-vote-count-name]").forEach(el => {
+            const name = el.getAttribute("data-vote-count-name");
+            el.innerText = `${voteCounts[name] || 0}표`;
+        });
+        document.querySelectorAll("[data-vote-name]").forEach(el => {
+            const name = el.getAttribute("data-vote-name");
+            const voted = myVotes.has(name);
+            el.classList.toggle("voted", voted);
+            el.innerText = voted ? "👍 투표함" : "👍 투표하기";
+        });
+    }
+
+    window.toggleVote = async (idx) => {
+        if (!currentGroupId) return;
+        const place = lastPlaces[idx];
+        if (!place) return;
+        try {
+            const q = query(
+                collection(db, "Votes"),
+                where("groupId", "==", currentGroupId),
+                where("placeName", "==", place.name),
+                where("user", "==", currentUserNickname)
+            );
+            const snap = await getDocs(q);
+            if (snap.empty) {
+                await addDoc(collection(db, "Votes"), {
+                    groupId: currentGroupId, placeName: place.name, user: currentUserNickname
+                });
+            } else {
+                await deleteDoc(doc(db, "Votes", snap.docs[0].id));
+            }
+        } catch (e) {
+            console.error(e);
+            alert("투표에 실패했어요: " + e.message);
+        }
+    };
+
+    // -------------------- 채팅 / 메모 --------------------
+    function subscribeToMessages(groupId) {
+        if (messagesUnsub) messagesUnsub();
+        const q = query(collection(db, "Messages"), where("groupId", "==", groupId));
+        messagesUnsub = onSnapshot(q, (snap) => {
+            const msgs = snap.docs.map(d => d.data()).sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+            const box = document.getElementById("chatMessages");
+            box.innerHTML = msgs.map(m => `
+                <div class="chat-bubble${m.user === currentUserNickname ? " me" : ""}">
+                    <div class="chat-user">${escapeHtml(m.user)}</div>
+                    <div>${escapeHtml(m.text)}</div>
+                </div>`).join("");
+            box.scrollTop = box.scrollHeight;
+
+            if (lastMessageCount > 0 && msgs.length > lastMessageCount) {
+                const latest = msgs[msgs.length - 1];
+                if (latest && latest.user !== currentUserNickname) {
+                    showToast(`💬 ${latest.user}: ${latest.text}`);
+                }
+            }
+            lastMessageCount = msgs.length;
+        });
+    }
+
+    window.sendMessage = async () => {
+        const input = document.getElementById("chatInput");
+        const text = input.value.trim();
+        if (!text) return;
+        if (!currentGroupId) return alert("먼저 그룹에 참여해주세요.");
+        try {
+            await addDoc(collection(db, "Messages"), {
+                groupId: currentGroupId,
+                user: currentUserNickname,
+                text,
+                createdAt: Date.now()
+            });
+            input.value = "";
+        } catch (e) {
+            console.error(e);
+            alert("메시지 전송에 실패했어요: " + e.message);
+        }
+    };
+
+    // -------------------- 모임 요약 카드 + 날씨 --------------------
+    async function renderSummaryCard() {
+        const card = document.getElementById("summaryCard");
+        const content = document.getElementById("summaryContent");
+        const { confirmedDate, confirmedPlace } = currentGroupData;
+
+        if (!confirmedDate && !confirmedPlace) {
+            card.style.display = "none";
+            return;
+        }
+        card.style.display = "block";
+
+        const members = lastParticipants.map(p => p.user).join(", ") || "아직 없음";
+        let html = `
+            <div class="line" style="color:var(--ink);font-size:13px;margin:4px 0;"><strong>그룹:</strong> ${escapeHtml(currentGroupName)}</div>
+            <div class="line" style="color:var(--ink);font-size:13px;margin:4px 0;"><strong>날짜:</strong> ${confirmedDate ? escapeHtml(formatDateKey(confirmedDate)) : "미정"}</div>
+            <div class="line" style="color:var(--ink);font-size:13px;margin:4px 0;"><strong>장소:</strong> ${confirmedPlace ? escapeHtml(confirmedPlace.name) + " (" + escapeHtml(confirmedPlace.address || "") + ")" : "미정"}</div>
+            <div class="line" style="color:var(--ink);font-size:13px;margin:4px 0;"><strong>참석자:</strong> ${escapeHtml(members)}</div>`;
+
+        content.innerHTML = html;
+
+        if (confirmedDate && confirmedPlace) {
+            const weatherHtml = await fetchWeatherHtml(confirmedPlace.lat, confirmedPlace.lng, confirmedDate);
+            content.innerHTML += weatherHtml;
+        }
+    }
+
+    async function fetchWeatherHtml(lat, lng, dateKey) {
+        try {
+            const res = await fetch(
+                `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=Asia%2FSeoul&start_date=${dateKey}&end_date=${dateKey}`
+            );
+            const data = await res.json();
+            if (!data.daily || !data.daily.time || data.daily.time.length === 0) {
+                return `<div class="weather-box"><div class="desc">☁️ 이 날짜는 아직 날씨 예보 범위(약 16일 이내) 밖이에요. 가까워지면 다시 확인해보세요.</div></div>`;
+            }
+            const max = data.daily.temperature_2m_max[0];
+            const min = data.daily.temperature_2m_min[0];
+            const rain = data.daily.precipitation_probability_max[0];
+            return `
+                <div class="weather-box">
+                    <div class="temp">${Math.round(max)}° / ${Math.round(min)}°</div>
+                    <div class="desc">강수확률 ${rain}%${rain >= 50 ? " · ☔ 우산을 챙기세요!" : ""}</div>
+                </div>`;
+        } catch (e) {
+            console.error(e);
+            return `<div class="weather-box"><div class="desc">날씨 정보를 불러오지 못했어요.</div></div>`;
+        }
+    }
+
+    window.copySummary = async () => {
+        const { confirmedDate, confirmedPlace } = currentGroupData;
+        const members = lastParticipants.map(p => p.user).join(", ") || "미정";
+        const text =
+            `📋 ${currentGroupName} 모임 안내\n` +
+            `📅 날짜: ${confirmedDate ? formatDateKey(confirmedDate) : "미정"}\n` +
+            `📍 장소: ${confirmedPlace ? confirmedPlace.name + " (" + (confirmedPlace.address || "") + ")" : "미정"}\n` +
+            `👥 참석자: ${members}`;
+        try {
+            await navigator.clipboard.writeText(text);
+            alert("모임 요약이 복사되었어요! 카톡 등에 붙여넣기 해보세요.");
+        } catch (e) {
+            alert("복사에 실패했어요. 직접 선택해서 복사해주세요.");
+        }
+    };
 
     function escapeHtml(str) {
         if (str === undefined || str === null) return "";
