@@ -318,6 +318,8 @@
           <span><i class="dot friend"></i>다른 멤버</span>
           <span><i class="dot mid"></i>중간 지점</span>
         </div>
+        <p style="margin-top:10px;">아래 추천 장소 카드에서 <strong>"🚗 동선 보기"</strong>를 누르면, 각 멤버 위치에서 그 장소까지 지도에 점선으로 표시돼요.</p>
+        <div id="routeArea"></div>
       </div>
 
       <div class="card">
@@ -582,6 +584,86 @@
     // -------------------- 지도 표시 --------------------
     let kakaoMap = null;
     let mapOverlays = [];
+    let routeLines = [];
+    let lastPlaces = []; // {name, lat, lng} registered from rendered place cards
+
+    function haversineKm(lat1, lng1, lat2, lng2) {
+        const R = 6371;
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLng = (lng2 - lng1) * Math.PI / 180;
+        const a = Math.sin(dLat / 2) ** 2 +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
+        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    }
+
+    function clearRouteLines() {
+        routeLines.forEach(l => l.setMap(null));
+        routeLines = [];
+    }
+
+    function registerPlace(place) {
+        const idx = lastPlaces.length;
+        lastPlaces.push({
+            name: place.place_name,
+            lat: parseFloat(place.y),
+            lng: parseFloat(place.x)
+        });
+        return idx;
+    }
+
+    window.showRouteToPlace = (idx) => {
+        const place = lastPlaces[idx];
+        if (!place) return;
+        const map = ensureMap();
+        if (!map) return;
+
+        const valid = lastParticipants.filter(p => typeof p.lat === "number" && typeof p.lng === "number");
+        if (valid.length === 0) {
+            alert("멤버 위치 정보가 없어서 동선을 그릴 수 없어요.");
+            return;
+        }
+
+        clearRouteLines();
+        const bounds = new kakao.maps.LatLngBounds();
+        const placePos = new kakao.maps.LatLng(place.lat, place.lng);
+        bounds.extend(placePos);
+
+        let listHtml = `<div class="card" style="margin-top:12px;">
+            <h3>🚗 "${escapeHtml(place.name)}"까지 동선</h3>`;
+
+        valid.forEach(p => {
+            const isMe = p.user === currentUserNickname;
+            const pos = new kakao.maps.LatLng(p.lat, p.lng);
+            bounds.extend(pos);
+
+            const line = new kakao.maps.Polyline({
+                path: [pos, placePos],
+                strokeWeight: 3,
+                strokeColor: isMe ? "#7c6df2" : "#221f36",
+                strokeOpacity: 0.75,
+                strokeStyle: "shortdash"
+            });
+            line.setMap(map);
+            routeLines.push(line);
+
+            const distKm = haversineKm(p.lat, p.lng, place.lat, place.lng).toFixed(1);
+            const directionsUrl = `https://map.kakao.com/link/from/${encodeURIComponent(p.user)},${p.lat},${p.lng}/to/${encodeURIComponent(place.name)},${place.lat},${place.lng}`;
+
+            listHtml += `
+                <div class="place-card">
+                    <div class="name">${escapeHtml(p.user)}${isMe ? " (나)" : ""}</div>
+                    <div class="addr">직선거리 약 ${distKm}km</div>
+                    <a href="${directionsUrl}" target="_blank" rel="noopener">카카오맵에서 실제 길찾기 →</a>
+                </div>`;
+        });
+
+        listHtml += `</div>`;
+        document.getElementById("routeArea").innerHTML = listHtml;
+
+        kakao.maps.event.trigger(map, "resize");
+        map.setBounds(bounds, 60, 60, 60, 60);
+        document.getElementById("mapContainer").scrollIntoView({ behavior: "smooth", block: "center" });
+    };
 
     function ensureMap() {
         const container = document.getElementById("mapContainer");
@@ -623,6 +705,9 @@
         if (!map) return;
 
         clearMapOverlays();
+        clearRouteLines();
+        const routeArea = document.getElementById("routeArea");
+        if (routeArea) routeArea.innerHTML = "";
         const valid = participants.filter(p => typeof p.lat === "number" && typeof p.lng === "number");
         const bounds = new kakao.maps.LatLngBounds();
 
@@ -685,6 +770,7 @@
     }
 
     function placeCardHtml(place) {
+        const idx = registerPlace(place);
         return `
             <div class="place-card">
                 <div class="name">${escapeHtml(place.place_name)}</div>
@@ -692,6 +778,9 @@
                 <div class="addr">${escapeHtml(place.road_address_name || place.address_name)}</div>
                 <div class="addr">중간 지점에서 약 ${place.distance ? Math.round(place.distance) + "m" : "-"}</div>
                 <a href="${place.place_url}" target="_blank" rel="noopener">카카오맵에서 리뷰 보기 →</a>
+                <div style="margin-top:8px;">
+                    <button class="chip" type="button" onclick="showRouteToPlace(${idx})">🚗 동선 보기</button>
+                </div>
             </div>`;
     }
 
@@ -703,6 +792,9 @@
 
         const resultArea = document.getElementById("resultArea");
         resultArea.innerHTML = `<div class="empty">추천 장소를 찾고 있어요...</div>`;
+        lastPlaces = [];
+        clearRouteLines();
+        document.getElementById("routeArea").innerHTML = "";
 
         let categories = [...new Set(lastParticipants.flatMap(p => p.categories || []))];
         if (categories.length === 0) categories = ["맛집", "카페"]; // 기본값
@@ -732,6 +824,9 @@
 
         const compareArea = document.getElementById("compareArea");
         compareArea.innerHTML = `<div class="empty">비교 중이에요...</div>`;
+        lastPlaces = [];
+        clearRouteLines();
+        document.getElementById("routeArea").innerHTML = "";
 
         const [placesA, placesB] = await Promise.all([
             searchPlaces(catA, mid.lat, mid.lng),
