@@ -366,40 +366,41 @@ button.vote-btn.voted { background: var(--accent-soft); border-color: var(--acce
 </div></div>
 
 <script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore, collection, addDoc, query, where, onSnapshot, getDocs, doc, getDoc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, collection, addDoc, query, where, onSnapshot, getDocs, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
 // 파이어베이스 설정 (본인 정보 유지)
-const firebaseConfig = {
-  apiKey: "AIzaSyCuFkfVGEBOW0DgFc_HHFVNwH7MygwywFo",
-  authDomain: "database-f30fe.firebaseapp.com",
-  projectId: "database-f30fe",
-  storageBucket: "database-f30fe.firebasestorage.app",
-  messagingSenderId: "297111267801",
-  appId: "1:297111267801:web:785326fe551b9244a251c8",
-  measurementId: "G-8Y2KEDEQPD"
-};
+    const firebaseConfig = {
+        apiKey: "AIzaSyCuFkfVGEBOw0DgFc_HHFVNwH7MygwywFo",
+        authDomain: "database-f30fe.firebaseapp.com",
+        projectId: "database-f30fe",
+        storageBucket: "database-f30fe.firebasestorage.app",
+        messagingSenderId: "297111267801",
+        appId: "1:297111267801:web:785326fe551b9244a251c8",
+        measurementId: "G-8Y2KEDEQPD"
+    };
+    
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
 
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-const auth = getAuth(app);
+    let currentUserNickname = "";
+    let currentGroupName = "";
+    let currentGroupId = "";
+    let lastParticipants = [];
+    
+    let groupUnsub = null;
+    let messagesUnsub = null;
+    let votesUnsub = null;
+    let voteCounts = {};
+    let myVotes = new Set();
+    let lastMessageCount = 0;
+    let currentGroupData = { confirmedDate: null, confirmedPlace: null };
+    let prevParticipantCount = 0;
 
-let currentUserNickname = "";
-let currentGroupName = "";
-let currentGroupId = "";
-let lastParticipants = [];
-let groupUnsub = null;
-let messagesUnsub = null;
-let votesUnsub = null;
-let voteCounts = {};
-let myVotes = new Set();
-let lastMessageCount = 0;
-let currentGroupData = { confirmedDate: null, confirmedPlace: null };
-let prevParticipantCount = 0;
-
-const urlParams = new URLSearchParams(window.location.search);
-const pendingInviteGroupId = urlParams.get("group");
+    const urlParams = new URLSearchParams(window.location.search);
+    const pendingInviteGroupId = urlParams.get("group");
 
 window.signUp = async () => {
   const email = document.getElementById("signupEmail").value.trim();
