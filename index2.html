@@ -145,7 +145,7 @@ ul.plain { list-style: none; padding: 0; margin: 0; }
   margin: 4px 0 6px; background: var(--accent-soft); padding: 2px 8px; border-radius: 999px;
 }
 .place-card .addr { font-size: 12.5px; color: var(--ink-soft); margin-bottom: 4px; }
-.place-card a { display: inline-block; margin-top: 6px; font-size: 12px; font-weight: 800; color: var(--accent-deep); text-decoration: none; }
+.place-card a { display: inline-block; margin-top: 6px; font-size: 12px; font-weight: 800; color: var(--accent-ink); text-decoration: underline; }
 .place-card a:hover { text-decoration: underline; }
 .compare-cols { display: flex; gap: 12px; }
 .compare-cols .col { flex: 1; min-width: 0; }
@@ -585,14 +585,21 @@ async function loadMyGroups() {
     }
     const seen = new Set();
     let html = "";
-    snap.forEach(d => {
-      const data = d.data();
-      if (seen.has(data.groupId)) return;
-      seen.add(data.groupId);
-      html += `<div class="my-group-item">
-        <span class="name">${escapeHtml(data.groupName)}</span>
-        <button class="chip" type="button" onclick="jumpToGroup('${data.groupId}', '${escapeHtml(data.groupName).replace(/'/g, "\\'")}')">이동하기 →</button>
-      </div>`;
+    snapshot.forEach((docSnap) => {
+      const d = docSnap.data();
+      lastParticipants.push(d);
+      const li = document.createElement("li");
+      li.className = "member";
+      const isMe = d.user === currentUserNickname; 
+      li.innerHTML = `
+        <div class="avatar">${(d.user || "?").charAt(0)}</div>
+        <div style="flex:1;">
+          <div><strong>${escapeHtml(d.user)}</strong></div>
+          <div class="meta">${escapeHtml(d.address)}${d.categories && d.categories.length ? " " + d.categories.map(escapeHtml).join(", ") : ""}</div>
+        </div>
+        ${isMe ? `<button class="ghost" style="width:auto; padding:4px 8px; font-size:12px; color:var(--danger);" onclick="deleteMyAddress('${docSnap.id}')">삭제</button>` : ""}
+      `;
+      list.appendChild(li);
     });
     box.innerHTML = html || '<div class="empty">아직 참여한 그룹이 없어요.</div>';
   } catch (e) { console.error(e); }
@@ -1259,6 +1266,27 @@ function escapeHtml(str) {
   if (str === undefined || str === null) return "";
   return String(str).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
 }
+window.deleteMyAddress = async (docId) => {
+  if (!confirm("등록한 주소와 카테고리를 삭제하시겠어요?")) return;
+  try {
+    await deleteDoc(doc(db, "Participant", docId));
+    alert("주소가 삭제되었습니다.");
+  } catch (e) {
+    console.error(e);
+    alert("삭제 실패: " + e.message);
+  }
+};
+
+window.deleteMyGroup = async (docId) => {
+  if (!confirm("이 모임을 목록에서 삭제하시겠어요?\n(내 목록에서만 지워지며, 그룹 자체는 유지됩니다.)")) return;
+  try {
+    await deleteDoc(doc(db, "Membership", docId));
+    loadMyGroups();
+  } catch (e) {
+    console.error(e);
+    alert("삭제 실패: " + e.message);
+  }
+};
 </script>
 </body>
 </html>
