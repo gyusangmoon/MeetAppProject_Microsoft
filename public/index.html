@@ -10,7 +10,6 @@
 
 <style>
 :root {
-  /* 김경은.pdf의 파스텔 톤 테마 적용 */
   --bg-navy: #fae8fb;
   --bg-navy-deep: #f2dcf3;
   --card: #ffffff;
@@ -30,17 +29,30 @@
 body {
   margin: 0;
   font-family: "Pretendard", "Apple SD Gothic Neo", "Segoe UI", sans-serif;
-  background: var(--bg-navy);
   color: var(--ink);
   min-height: 100vh;
   display: flex;
   justify-content: center;
   padding: 32px 16px;
+
+  /* ===== [배경 디자인 변경] 7-14-3에서 적용 =====
+     은은한 여행/풍경 느낌의 배경 이미지를 깔고, 그 위에 앱의 파스텔 톤과
+     어울리는 반투명 그라데이션 오버레이를 얹어 채도를 낮춤으로써
+     본문 카드/텍스트의 가독성을 해치지 않도록 처리했습니다. */
+  background-image:
+    linear-gradient(180deg, rgba(250, 232, 251, 0.88) 0%, rgba(242, 220, 243, 0.82) 45%, rgba(227, 213, 235, 0.9) 100%),
+    url("https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1600&q=60");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed; /* 스크롤해도 배경이 함께 흐르지 않도록 고정 */
 }
 #phone {
   width: 100%;
   max-width: 440px;
-  background: var(--bg-navy-deep);
+  background: rgba(242, 220, 243, 0.55); /* 배경 이미지가 은은하게 비치도록 반투명 처리 */
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
   border-radius: 34px;
   padding: 12px;
   box-shadow: 0 30px 70px rgba(0,0,0,.15), inset 0 0 0 1px rgba(255,255,255,.5);
@@ -73,7 +85,7 @@ p { color: var(--ink-soft); font-size: 13px; line-height: 1.55; margin: 4px 0 14
   align-items: center;
   gap: 4px;
   background: var(--accent-soft);
-  color: var(--ink); /* 글씨 진하게 수정 */
+  color: var(--ink);
   font-size: 11px;
   font-weight: 800;
   padding: 5px 12px;
@@ -173,7 +185,6 @@ ul.plain { list-style: none; padding: 0; margin: 0; }
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-thumb { background: var(--line); border-radius: 10px; }
 
-/* 안예은.pdf의 신규 기능 CSS */
 #toastStack { position: absolute; top: 14px; left: 14px; right: 14px; z-index: 50; display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
 .toast {
   background: var(--ink); color: #fff; padding: 10px 14px; border-radius: 12px; font-size: 12.5px; font-weight: 700;
@@ -203,6 +214,7 @@ button.vote-btn.voted { background: var(--accent-soft); border-color: var(--acce
 .weather-box .desc { font-size: 12px; color: var(--ink-soft); }
 .my-group-item { display: flex; justify-content: space-between; align-items: center; background: var(--card-cream); border-radius: 14px; padding: 10px 12px; margin-bottom: 8px; }
 .my-group-item .name { font-weight: 800; font-size: 13px; color: var(--ink); }
+
 /* 챗봇 플로팅 버튼 및 채팅창 CSS 스타일 */
 #chatbot-launcher {
   position: fixed;
@@ -424,6 +436,49 @@ button.vote-btn.voted { background: var(--accent-soft); border-color: var(--acce
 }
 .agenda-item .actions .edit-btn { background: var(--accent-soft); color: var(--ink); }
 .agenda-item .actions .del-btn { background: transparent; color: var(--danger); border: 1px solid var(--danger); }
+
+/* ===== [신규] BGM(배경음악) 컨트롤러 CSS =====
+   챗봇 플로팅 아이콘 '바로 왼쪽'에 배치됩니다. */
+#bgmController {
+  position: fixed;
+  bottom: 24px;
+  right: 92px; /* 챗봇 아이콘(56px) + 여백만큼 왼쪽으로 이동 */
+  z-index: 2147483000;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #ffffff;
+  border-radius: 999px;
+  padding: 8px 10px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.18);
+  border: 1px solid var(--line);
+}
+#bgmToggleBtn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--ink);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+  cursor: pointer;
+  flex-shrink: 0;
+  padding: 0;
+  box-shadow: none;
+}
+#bgmToggleBtn.playing { background: linear-gradient(135deg, var(--accent) 0%, var(--accent-deep) 100%); color: var(--ink); }
+#bgmVolume {
+  width: 70px;
+  accent-color: var(--accent-deep);
+  cursor: pointer;
+}
+/* 모바일 좁은 화면에서는 볼륨 슬라이더를 살짝 접어 공간을 아낌 */
+@media (max-width: 380px) {
+  #bgmVolume { width: 46px; }
+  #bgmController { right: 82px; padding: 6px 8px; gap: 6px; }
+}
 </style>
 </head>
 <body>
@@ -431,7 +486,7 @@ button.vote-btn.voted { background: var(--accent-soft); border-color: var(--acce
   <div id="toastStack"></div>
   
   <div id="authArea">
-    <span class="badge">모여봐</span>
+    <span class="badge">모여봐🤗</span>
     <h1>다시 만나서 반가워요!</h1>
     <p>이메일과 비밀번호로 로그인하거나, 처음이시라면 계정을 만들어주세요.</p>
     <div class="card">
@@ -450,7 +505,7 @@ button.vote-btn.voted { background: var(--accent-soft); border-color: var(--acce
 
   <div id="mainServiceArea">
     <div class="topbar">
-      <h1 style="font-size:19px;">모여봐</h1>
+      <h1 style="font-size:19px;">모여봐🤗</h1>
       <span class="who" id="whoAmI"></span>
     </div>
 
@@ -578,8 +633,8 @@ button.vote-btn.voted { background: var(--accent-soft); border-color: var(--acce
         <h3>장소 비교하기</h3>
         <p style="margin-bottom:8px;">두 가지 카테고리를 넣으면 중간 지점 근처에서 각각 후보를 찾아 나란히 비교해드려요.</p>
         <div class="row">
-          <input type="text" id="compare" placeholder="예: 치킨">
-          <input type="text" id="compareB" placeholder="예: 떡볶이">
+          <input type="text" id="compare" placeholder="예: 카페">
+          <input type="text" id="compareB" placeholder="예: 분식">
         </div>
         <label class="small">가격대 (선택)</label>
         <select id="priceComparePref" style="width: 100%; border:1.5px solid var(--line); border-radius: 13px;padding:12px 14px; font-size:14px;margin-bottom:10px;font-family: inherit; background:#fff;">
@@ -611,6 +666,16 @@ button.vote-btn.voted { background: var(--accent-soft); border-color: var(--acce
     <button class="primary" onclick="saveEvent()">일정 저장하기</button>
   </div>
 </div>
+<!-- ===== [신규] BGM 배경음악 컨트롤러 (챗봇 아이콘 바로 왼쪽) ===== -->
+<div id="bgmController">
+  <button id="bgmToggleBtn" onclick="toggleBgm()" aria-label="배경음악 재생/정지">🎵</button>
+  <input type="range" id="bgmVolume" min="0" max="100" value="35" oninput="setBgmVolume(this.value)" aria-label="음량 조절">
+  <!-- 저작권 없는 잔잔한 로파이/카페풍 샘플 오디오 -->
+  <audio id="bgmAudio" loop preload="none">
+    <source src="https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3" type="audio/mpeg">
+  </audio>
+</div>
+
 <div id="chatbot-launcher" onclick="toggleChatbot()">💬</div>
 <div id="chatbot-window">
   <div id="chatbot-header">
@@ -663,6 +728,31 @@ button.vote-btn.voted { background: var(--accent-soft); border-color: var(--acce
     let myEvents = {}; // { "2026-07-14": [{id, title, time, memo}, ...] }
     let activeModalDateKey = null;
     let editingEventId = null;
+    
+  function toggleBgm() {
+    const bgmAudio = document.getElementById('bgmAudio');
+    const bgmToggleBtn = document.getElementById('bgmToggleBtn');
+    if (bgmAudio.paused) {
+        bgmAudio.play()
+            .then(() => { bgmToggleBtn.innerText = "⏸️"; })
+            .catch(err => console.log("화면 클릭 후 재생해 주세요.", err));
+    } else {
+        bgmAudio.pause();
+        bgmToggleBtn.innerText = "🎵";
+    }
+}
+
+// HTML에 적힌 setBgVolume과 완벽하게 이름을 맞춘 함수입니다!
+function setBgVolume(value) {
+    const bgmAudio = document.getElementById('bgmAudio');
+    bgmAudio.volume = Number(value) / 100;
+}
+document.getElementById('bgmVolume').addEventListener('input', function(e) {
+    document.getElementById('bgmAudio').volume = Number(e.target.value) / 100;
+});
+
+window.toggleBgm = toggleBgm;
+window.setBgVolume = setBgVolume;
 
     const urlParams = new URLSearchParams(window.location.search);
     const pendingInviteGroupId = urlParams.get("group");
@@ -720,8 +810,7 @@ async function enterService() {
   document.getElementById("authArea").style.display = "none";
   document.getElementById("mainServiceArea").style.display = "block";
   document.getElementById("whoAmI").innerText = currentUserNickname ? `${currentUserNickname}님` : "";
-  
-  // 김경은.pdf 화면 전환 적용
+
   document.getElementById("groupSelectionArea").style.display = "block";
   document.getElementById("actionArea").style.display = "none";
 
@@ -781,7 +870,6 @@ async function enterGroup(groupId, name, fromInvite) {
   currentGroupName = name;
   document.getElementById("currentGroupTitle").innerText = `참여 중: ${currentGroupName}`;
   
-  // 김경은.pdf 화면 전환 적용
   document.getElementById("groupSelectionArea").style.display = "none";
   document.getElementById("actionArea").style.display = "block";
   
@@ -821,7 +909,6 @@ async function enterGroup(groupId, name, fromInvite) {
   }
 }
 
-// 김경은.pdf 홈 화면 돌아가기
 window.goHome = () => {
   currentGroupId = "";
   currentGroupName = "";
@@ -926,7 +1013,6 @@ window.saveMyAddress = async () => {
     const { lat, lng } = await geocodeAddress(address);
     const categories = categoriesRaw ? categoriesRaw.split(",").map(s => s.trim()).filter(Boolean) : [];
     
-    // 김경은.pdf 주소 중복 저장 방지 로직 적용
     const q = query(collection(db, "Participant"), where("groupId", "==", currentGroupId), where("user", "==", currentUserNickname));
     const snap = await getDocs(q);
     if (snap.empty) {
@@ -1171,32 +1257,93 @@ function placeCardHtml(place) {
 }
 
 window.recommendLocation = async () => {
-  if (lastParticipants.length < 2) return alert("멤버가 2명 이상이어야 추천할 수 있어요.");
-  const mid = computeMidpoint(lastParticipants);
-  if (!mid) return alert("먼저 멤버들의 주소가 등록되어야 해요.");
-  const resultArea = document.getElementById("resultArea");
-  resultArea.innerHTML = '<div class="empty">추천 장소를 찾고 있어요...</div>';
-  lastPlaces = [];
-  clearRouteLines();
-  document.getElementById("routeArea").innerHTML = "";
-  
-  let categories = [...new Set(lastParticipants.flatMap(p => p.categories || []))];
-  if (categories.length === 0) categories = ["맛집", "카페"];
-  const pricePref = document.getElementById("priceGroupPref").value;
-  let html = '<div class="lead">중간 지점 근처, 멤버들이 원한 카테고리 기준 추천이에요.</div>';
-  
-  for (const cat of categories) {
-    const keyword = pricePref ? `${cat} ${pricePref}` : cat;
-    const places = await searchPlaces(keyword, mid.lat, mid.lng);
-    html += `<h3 style="margin-top:12px;">${escapeHtml(cat)}</h3>`;
-    if (places.length === 0) {
-      html += `<div class="empty">근처에서 "${escapeHtml(cat)}" 관련 장소를 찾지 못했어요.</div>`;
-    } else {
-      html += placeCardHtml(places[0]);
+    const category = document.getElementById("userCategories").value || "카페";
+    const pricePref = document.getElementById("priceGroupPref").value;
+    const resultArea = document.getElementById("resultArea");
+
+    // 1. 카카오 API로 후보지 검색 (기존 로직 유지)
+    const midPoint = calculateMidPoint(lastParticipants);
+    const places = await searchKakaoPlaces(midPoint, category);
+
+    if (!places || places.length === 0) {
+        resultArea.innerHTML = "해당 지역에서 찾을 수 없어요.";
+        return;
     }
-  }
-  resultArea.innerHTML = html;
+
+    // 2. 우리 서버로 데이터 전송
+    resultArea.innerHTML = "AI가 분석 중입니다...";
+    
+    const response = await fetch('/api/recommend', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ places, preference: pricePref, category })
+    });
+
+    const data = await response.json();
+    
+    // 3. 결과 렌더링
+    if (data.recommendations) {
+        resultArea.innerHTML = data.recommendations.map(item => `
+            <div class="place-card">
+                <div class="name">${item.name}</div>
+                <div class="addr">${item.address}</div>
+                <p style="font-size:12px; color:#555;">💡 ${item.reason}</p>
+                <a href="${item.link}" target="_blank">카카오맵에서 보기 →</a>
+            </div>
+        `).join('');
+    }
 };
+
+// 중간 지점 계산 함수 (모든 멤버 좌표의 평균값)
+function calculateMidPoint(participants) {
+    if (!participants || participants.length === 0) return { lat: 37.5665, lng: 126.9780 }; // 기본값: 서울시청
+
+    let latSum = 0;
+    let lngSum = 0;
+    let count = 0;
+
+    participants.forEach(p => {
+        // p.lat, p.lng가 저장되어 있다고 가정
+        if (p.lat && p.lng) {
+            latSum += parseFloat(p.lat);
+            lngSum += parseFloat(p.lng);
+            count++;
+        }
+    });
+
+    return {
+        lat: latSum / count,
+        lng: lngSum / count
+    };
+}
+
+// 카카오 지도 API를 사용한 장소 검색 함수
+async function searchKakaoPlaces(midPoint, category) {
+    return new Promise((resolve, reject) => {
+        const ps = new kakao.maps.services.Places();
+        
+        // 검색 위치 설정
+        const loc = new kakao.maps.LatLng(midPoint.lat, midPoint.lng);
+        
+        // 키워드로 장소 검색
+        ps.keywordSearch(category, (data, status) => {
+            if (status === kakao.maps.services.Status.OK) {
+                // 검색 결과가 있으면 배열 반환
+                resolve(data);
+            } else if (status === kakao.maps.services.Status.ZERO_RESULT) {
+                resolve([]); // 결과 없음
+            } else {
+                reject(new Error("카카오 API 검색 실패"));
+            }
+        }, {
+            location: loc,
+            radius: 2000, // 중간지점 반경 2km 이내 검색
+            sort: kakao.maps.services.SortBy.DISTANCE // 가까운 순으로 정렬
+        });
+    });
+}
+
+
 
 window.compareCategories = async () => {
   if (lastParticipants.length < 2) return alert("멤버가 2명 이상이어야 비교할 수 있어요.");
@@ -1665,7 +1812,10 @@ async function fetchWeatherHtml(lat, lng, dateKey) {
     return `
       <div class="weather-box">
         <div class="temp">${Math.round(max)}° / ${Math.round(min)}°</div>
-        <div class="desc">강수확률 ${rain}% ${rain >= 50 ? "☔ 우산을 챙기세요!" : ""}</div>
+        <div class="desc">강수확률 ${rain}% ${rain >= 60 ? "☔ 우산을 챙기세요!" : ""}
+          ${max >= 30 ? "🥵 더워요! 손선풍기를 챙기세요!" : ""}
+          ${min <= 7 ? "🥶 추워요! 옷을 따뜻하게 입으세요!" : ""}
+          </div>
       </div>`;
   } catch (e) {
     console.error(e);
@@ -1754,7 +1904,6 @@ window.resetGroup = async () => {
 
 </script>
 <script>
-// 팀원이 열어둔 ngrok 백엔드 서버 주소
 const NGROK_URL = 'https://barmaid-unexpired-spotty.ngrok-free.dev';
 
 // 챗봇 토글 함수
@@ -1805,7 +1954,7 @@ async function sendBotMessage() {
     botBubble.innerText = data.reply;
     
   } catch (error) {
-    botBubble.innerText = '⚠️ 서버와 연결할 수 없습니다. 팀원 분의 백엔드(ngrok)가 켜져 있는지 확인해 주세요.';
+    botBubble.innerText = '⚠️ 서버와 연결할 수 없습니다. 백엔드(ngrok)가 켜져 있는지 확인해 주세요.';
   }
   msgContainer.scrollTop = msgContainer.scrollHeight;
 }

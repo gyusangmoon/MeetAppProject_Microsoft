@@ -45,5 +45,37 @@ app.post('/api/chat', async (req, res) => {
     }
 });
 
+// [신규] 장소 필터링 및 추천 API 엔드포인트
+app.post('/api/recommend', async (req, res) => {
+    try {
+        const { places, preference, category } = req.body;
+
+       
+        const systemPrompt = `당신은 장소 추천 전문가입니다. 
+        사용자의 가격대 성향('${preference}')에 맞춰 후보 장소들 중 가장 적합한 곳 3곳을 선정하세요.
+        반드시 결과는 JSON 배열 형식으로만 응답하세요: 
+        [{"name": "이름", "address": "주소", "reason": "추천 이유", "link": "카카오맵 링크"}]`;
+    
+
+        const userPrompt = `카테고리: ${category}, 후보 리스트: ${JSON.stringify(places)}`;
+
+        const messages = [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userPrompt }
+        ];
+
+        const result = await client.getChatCompletions(deploymentId, messages);
+        const reply = result.choices[0].message.content;
+        
+        // JSON 부분만 파싱하여 반환 (혹시 모를 마크다운 텍스트 제거)
+        const jsonReply = reply.replace(/```json|```/g, '').trim();
+        res.json({ recommendations: JSON.parse(jsonReply) });
+
+    } catch (error) {
+        console.error("추천 에러:", error);
+        res.status(500).json({ error: "AI 추천 처리 중 오류가 발생했습니다." });
+    }
+});
+
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => console.log(`로컬 서버 실행 중: http://localhost:${PORT}`));
