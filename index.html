@@ -1,0 +1,1457 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>모여봐 - 그룹 중간 장소 추천</title>
+
+<script src="//dapi.kakao.com/v2/maps/sdk.js?appkey=f51bbc921d6e6ce6aa7864f1e0d9b7ba&libraries=services"></script>
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+
+<style>
+:root {
+  /* 김경은.pdf의 파스텔 톤 테마 적용 */
+  --bg-navy: #fae8fb;
+  --bg-navy-deep: #f2dcf3;
+  --card: #ffffff;
+  --card-cream: #c3d9c3;
+  --ink: #2b2b2b;
+  --ink-soft: #666666;
+  --accent: #f4d9f3;
+  --accent-deep: #e8c6e7;
+  --accent-soft: #e2efe2;
+  --accent2: #f4d9f3;
+  --line: #dcdcdc;
+  --danger: #e67373;
+  --shadow-soft: 0 8px 24px rgba(0,0,0,.04);
+  --shadow-lift: 0 14px 34px rgba(0,0,0,.08);
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: "Pretendard", "Apple SD Gothic Neo", "Segoe UI", sans-serif;
+  background: var(--bg-navy);
+  color: var(--ink);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  padding: 32px 16px;
+}
+#phone {
+  width: 100%;
+  max-width: 440px;
+  background: var(--bg-navy-deep);
+  border-radius: 34px;
+  padding: 12px;
+  box-shadow: 0 30px 70px rgba(0,0,0,.15), inset 0 0 0 1px rgba(255,255,255,.5);
+}
+#screen {
+  background: var(--card-cream);
+  border-radius: 26px;
+  min-height: 640px;
+  padding: 24px 18px 30px;
+  position: relative;
+  overflow: hidden;
+}
+h1, h2, h3 { margin: 0 0 6px; }
+h1 { font-size: 22px; color: var(--ink); letter-spacing: -.3px; }
+h2 { font-size: 17px; color: var(--ink); }
+h3 { font-size: 14px; color: var(--ink); font-weight: 800; letter-spacing: .1px; display: flex; align-items: center; gap: 6px; }
+p { color: var(--ink-soft); font-size: 13px; line-height: 1.55; margin: 4px 0 14px; }
+.card {
+  background: var(--card);
+  border-radius: 20px;
+  padding: 18px;
+  margin-bottom: 16px;
+  box-shadow: var(--shadow-soft);
+  border: 1px solid rgba(34,31,54,.04);
+  transition: box-shadow .2s;
+}
+.card:hover { box-shadow: var(--shadow-lift); }
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--accent-soft);
+  color: var(--ink); /* 글씨 진하게 수정 */
+  font-size: 11px;
+  font-weight: 800;
+  padding: 5px 12px;
+  border-radius: 999px;
+  margin-bottom: 10px;
+  letter-spacing: .3px;
+}
+.badge.alt { background: #ece9fb; color: var(--accent2); }
+input[type=text], input[type=email], input[type=password] {
+  width: 100%;
+  border: 1.5px solid var(--line);
+  background: #fff;
+  border-radius: 13px;
+  padding: 12px 14px;
+  font-size: 14px;
+  margin-bottom: 10px;
+  outline: none;
+  transition: border-color .15s, box-shadow .15s;
+  font-family: inherit;
+}
+input:focus { border-color: var(--accent); box-shadow: 0 0 0 4px rgba(232, 198, 231, 0.4); }
+label.small { font-size: 12px; color: var(--ink-soft); display: block; margin: -4px 0 6px 2px; }
+button {
+  font-family: inherit; cursor: pointer; border: none; border-radius: 14px;
+  font-size: 14px; font-weight: 800; padding: 13px 16px;
+  transition: transform .12s, filter .15s, box-shadow .15s;
+}
+button:active { transform: scale(.97); }
+button.primary {
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-deep) 100%);
+  color: var(--ink); width: 100%;
+  box-shadow: 0 8px 18px rgba(232, 198, 231, 0.5);
+}
+button.primary:hover { filter: brightness(1.05); }
+button.dark {
+  background: var(--ink); color: #fff; width: 100%;
+  box-shadow: 0 8px 18px rgba(0,0,0,.15);
+}
+button.dark:hover { filter: brightness(1.15); }
+button.ghost { background: transparent; color: var(--ink-soft); width: 100%; text-decoration: underline; font-weight: 600; box-shadow: none; }
+button.chip {
+  background: var(--card-cream); color: var(--ink); border: 1.5px solid var(--line);
+  border-radius: 999px; padding: 8px 14px; font-size: 12.5px; font-weight: 700; margin: 0 6px 6px 0;
+}
+.row { display: flex; gap: 10px; }
+.row > * { flex: 1; }
+ul.plain { list-style: none; padding: 0; margin: 0; }
+.member {
+  display: flex; align-items: center; gap: 10px; background: var(--card-cream);
+  border-radius: 15px; padding: 10px 12px; margin-bottom: 8px; font-size: 13px;
+  border: 1px solid transparent; transition: border-color .15s;
+}
+.member:hover { border-color: var(--accent-soft); }
+.avatar {
+  width: 36px; height: 36px; border-radius: 50%; background: var(--ink); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 15px; font-weight: 800; flex-shrink: 0; box-shadow: 0 4px 10px rgba(0,0,0,.15);
+}
+.member .meta { color: var(--ink-soft); font-size: 11.5px; margin-top: 2px; }
+.place-card {
+  background: var(--card-cream); border-radius: 16px; padding: 14px;
+  margin-bottom: 10px; border: 1.5px solid var(--line);
+  transition: transform .15s, border-color .15s;
+}
+.place-card:hover { transform: translateY(-2px); border-color: var(--accent-soft); }
+.place-card .name { font-weight: 800; font-size: 14.5px; color: var(--ink); }
+.place-card .cat {
+  display: inline-block; font-size: 11px; color: var(--ink); font-weight: 800;
+  margin: 4px 0 6px; background: var(--accent-soft); padding: 2px 8px; border-radius: 999px;
+}
+.place-card .addr { font-size: 12.5px; color: var(--ink-soft); margin-bottom: 4px; }
+.place-card a { display: inline-block; margin-top: 6px; font-size: 12px; font-weight: 800; color: var(--accent-ink); text-decoration: underline; }
+.place-card a:hover { text-decoration: underline; }
+.compare-cols { display: flex; gap: 12px; }
+.compare-cols .col { flex: 1; min-width: 0; }
+.compare-cols h3 { color: var(--ink); font-size: 13px; margin-bottom: 8px; }
+#mapContainer {
+  width: 100%; height: 260px; border-radius: 18px; overflow: hidden;
+  background: #eee7f5; box-shadow: inset 0 0 0 1px rgba(34,31,54,.06);
+}
+.map-legend { display: flex; gap: 14px; margin-top: 10px; flex-wrap: wrap; }
+.map-legend span { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--ink-soft); font-weight: 700; }
+.dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.dot.you { background: var(--accent2); }
+.dot.friend { background: var(--ink); }
+.dot.mid { background: var(--accent-deep); }
+#authArea {}
+#mainServiceArea { display: none; }
+#actionArea { display: none; }
+.topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
+.topbar .who {
+  font-size: 12px; color: var(--ink-soft); font-weight: 700;
+  background: var(--card-cream); padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line);
+}
+.empty { font-size: 12.5px; color: var(--ink-soft); padding: 8px 2px; }
+#resultArea .lead, #dateResultArea .lead { font-size: 12.5px; color: var(--ink-soft); margin-bottom: 10px; }
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-thumb { background: var(--line); border-radius: 10px; }
+
+/* 안예은.pdf의 신규 기능 CSS */
+#toastStack { position: absolute; top: 14px; left: 14px; right: 14px; z-index: 50; display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
+.toast {
+  background: var(--ink); color: #fff; padding: 10px 14px; border-radius: 12px; font-size: 12.5px; font-weight: 700;
+  box-shadow: 0 10px 24px rgba(0,0,0,.3); opacity: 0; transform: translateY(-8px);
+  animation: toastIn .25s ease forwards, toastOut .3s ease forwards 2.7s;
+}
+@keyframes toastIn { to { opacity: 1; transform: translateY(0); } }
+@keyframes toastOut { to { opacity: 0; transform: translateY(-8px); } }
+.confirm-banner {
+  background: linear-gradient(135deg, #2c2745, var(--ink)); color: #fff; border-radius: 18px; padding: 16px; margin-bottom: 16px; box-shadow: var(--shadow-lift);
+}
+.confirm-banner .badge { background: rgba(255,255,255,.15); color: #e8c6e7; }
+.confirm-banner .line { font-size: 13px; margin: 4px 0; opacity: .95; }
+.confirm-banner .line strong { color: var(--accent); }
+.vote-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+button.vote-btn { background: #fff; border: 1.5px solid var(--line); color: var(--ink); padding: 8px 12px; font-size: 12.5px; border-radius: 999px; font-weight: 700; }
+button.vote-btn.voted { background: var(--accent-soft); border-color: var(--accent); color: var(--ink); }
+.vote-count { font-size: 12px; color: var(--ink-soft); font-weight: 700; }
+#chatMessages { max-height: 220px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; padding-right: 2px; }
+.chat-bubble { background: var(--card-cream); border-radius: 14px; padding: 8px 12px; font-size: 13px; max-width: 85%; align-self: flex-start; border: 1px solid var(--line); }
+.chat-bubble.me { align-self: flex-end; background: var(--accent-soft); border-color: var(--accent); }
+.chat-bubble .chat-user { font-size: 11px; font-weight: 800; color: var(--ink-soft); margin-bottom: 2px; }
+.chat-bubble.me .chat-user { color: var(--ink); }
+.summary-card { background: linear-gradient(180deg, #fff, var(--card-cream)); border: 1.5px solid var(--accent-soft); }
+.weather-box { display: flex; gap: 14px; align-items: center; margin-top: 8px; background: var(--card-cream); border-radius: 14px; padding: 12px; }
+.weather-box .temp { font-size: 20px; font-weight: 800; color: var(--ink); }
+.weather-box .desc { font-size: 12px; color: var(--ink-soft); }
+.my-group-item { display: flex; justify-content: space-between; align-items: center; background: var(--card-cream); border-radius: 14px; padding: 10px 12px; margin-bottom: 8px; }
+.my-group-item .name { font-weight: 800; font-size: 13px; color: var(--ink); }
+/* 챗봇 플로팅 버튼 및 채팅창 CSS 스타일 */
+#chatbot-launcher {
+  position: absolute;
+  bottom: 24px;
+  right: 24px;
+  width: 56px;
+  height: 56px;
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-deep) 100%);
+  border-radius: 50%;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  cursor: pointer;
+  z-index: 999;
+  transition: transform 0.2s;
+}
+#chatbot-launcher:hover { transform: scale(1.05); }
+#chatbot-window {
+  position: absolute;
+  bottom: 90px;
+  right: 24px;
+  width: 320px;
+  height: 400px;
+  background: #ffffff;
+  border-radius: 20px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+  display: none;
+  flex-direction: column;
+  overflow: hidden;
+  z-index: 1000;
+  border: 1px solid var(--line);
+}
+#chatbot-header {
+  background: var(--bg-navy-deep);
+  padding: 12px 16px;
+  font-weight: bold;
+  font-size: 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--line);
+}
+#chatbot-messages {
+  flex: 1;
+  padding: 14px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: #fafafa;
+}
+.chat-bubble {
+  max-width: 80%;
+  padding: 9px 14px;
+  border-radius: 14px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+.chat-bubble.user {
+  background: var(--accent);
+  align-self: flex-end;
+  border-bottom-right-radius: 2px;
+}
+.chat-bubble.bot {
+  background: #e9e9eb;
+  align-self: flex-start;
+  border-bottom-left-radius: 2px;
+}
+#chatbot-footer {
+  display: flex;
+  padding: 10px;
+  background: #fff;
+  border-top: 1px solid var(--line);
+}
+#chatbot-input {
+  flex: 1;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+  outline: none;
+}
+#chatbot-send {
+  background: var(--ink);
+  color: #fff;
+  border: none;
+  padding: 8px 14px;
+  margin-left: 6px;
+  border-radius: 8px;
+  font-size: 13px;
+  cursor: pointer;
+}
+</style>
+</head>
+<body>
+<div id="phone"><div id="screen">
+  <div id="toastStack"></div>
+  
+  <div id="authArea">
+    <span class="badge">모여봐</span>
+    <h1>다시 만나서 반가워요!</h1>
+    <p>이메일과 비밀번호로 로그인하거나, 처음이시라면 계정을 만들어주세요.</p>
+    <div class="card">
+      <input type="email" id="email" placeholder="이메일">
+      <input type="password" id="password" placeholder="비밀번호">
+      <button class="primary" onclick="signIn()">로그인</button>
+    </div>
+    <div class="card">
+      <h3 style="margin-bottom: 10px;">처음이신가요?</h3>
+      <input type="text" id="nickname" placeholder="닉네임">
+      <input type="email" id="signupEmail" placeholder="이메일">
+      <input type="password" id="signupPassword" placeholder="비밀번호 (6자 이상)">
+      <button class="dark" onclick="signUp()">회원가입</button>
+    </div>
+  </div>
+
+  <div id="mainServiceArea">
+    <div class="topbar">
+      <h1 style="font-size:19px;">모여봐</h1>
+      <span class="who" id="whoAmI"></span>
+    </div>
+
+    <div id="groupSelectionArea">
+      <div class="card">
+        <h3>그룹 만들기</h3>
+        <input type="text" id="newGroupName" placeholder="새 그룹 이름">
+        <button class="primary" onclick="createGroup()">그룹 생성하기</button>
+        <div id="inviteLinkBox" style="display:none; margin-top:12px;">
+          <label class="small">초대 링크가 만들어졌어요! 친구에게 공유해보세요.</label>
+          <input type="text" id="inviteLinkInput" readonly onclick="this.select()">
+          <button class="dark" type="button" onclick="copyInviteLink()">링크 복사하기</button>
+        </div>
+      </div>
+      
+      <div class="card">
+        <h3>그룹 참여하기</h3>
+        <input type="text" id="searchGroupName" placeholder="참여할 그룹 이름">
+        <button class="dark" onclick="joinGroup()">참여하기</button>
+      </div>
+
+      <div class="card">
+        <h3>내 모임 목록</h3>
+        <p style="margin-bottom:8px;">지금까지 참여한 그룹이에요. 눌러서 바로 이동할 수 있어요.</p>
+        <div id="myGroupsList"><div class="empty">아직 참여한 그룹이 없어요.</div></div>
+      </div>
+    </div>
+    
+    <div id="actionArea">
+      <button class="ghost" onclick="goHome()" style="text-align:left; padding: 0 0 16px 4px; font-size:13px; color:var(--ink-soft); box-shadow:none;">&lt; 그룹 목록으로 (홈)</button>
+
+      <div class="card" id="inviteBannerCard" style="display:none;">
+        <span class="badge alt">초대받았어요</span>
+        <p style="margin-bottom:0;" id="inviteBannerText"></p>
+      </div>
+
+      <div id="confirmBanner" style="display:none;"></div>
+
+      <div class="card summary-card" id="summaryCard" style="display:none;">
+        <h3>모임 요약</h3>
+        <div id="summaryContent"></div>
+        <button class="dark" style="margin-top:10px;" onclick="copySummary()">요약 복사하기</button>
+      </div>
+
+      <div class="card">
+        <h3>그룹 채팅 / 메모</h3>
+        <div id="chatMessages"></div>
+        <div class="row">
+          <input type="text" id="chatInput" placeholder="메시지를 입력하세요">
+          <button class="primary" style="flex:0 0 80px;" onclick="sendMessage()">전송</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <span class="badge" id="currentGroupTitle"></span>
+        <h3>모일 수 있는 날짜 선택</h3>
+        <p style="margin-bottom:8px;">달력에서 가능한 날짜를 여러 개 눌러서 선택해주세요. 선택한 날짜는 다시 누르면 취소돼요.</p>
+        <div class="row" style="align-items:center; margin-bottom: 6px;">
+          <button class="chip" type="button" onclick="changeCalendarMonth(-1)">&lt; 이전달</button>
+          <div id="calendarMonthLabel" style="text-align:center; font-weight:800;color:var(--ink); flex:1;"></div>
+          <button class="chip" type="button" onclick="changeCalendarMonth(1)">다음달 &gt;</button>
+        </div>
+        <div id="calendarGrid"></div>
+        <button class="primary" style="margin-top:10px;" onclick="saveMyAvailability()">선택한 날짜 저장하기</button>
+      </div>
+
+      <div class="card">
+        <h3>AI 모임 날짜 추천</h3>
+        <p style="margin-bottom:8px;">멤버들이 선택한 날짜를 모아서 가장 많이 겹치는 날짜를 찾아드려요.</p>
+        <button class="dark" onclick="recommendDate()">최적 날짜 추천받기</button>
+        <div id="dateResultArea"></div>
+      </div>
+
+      <div class="card">
+        <h3>내 주소 등록</h3>
+        <input type="text" id="userAddress" placeholder="도로명 주소 (예: 서울 강남대로 396)">
+        <label class="small">가고 싶은 장소 종류가 있다면 적어주세요 (쉼표로 구분)</label>
+        <input type="text" id="userCategories" placeholder="예: 카페, 방탈출, 치킨">
+        <button class="primary" onclick="saveMyAddress()">내 정보 저장하기</button>
+      </div>
+
+      <div class="card">
+        <h3>참여 멤버</h3>
+        <ul class="plain" id="participantList"></ul>
+      </div>
+
+      <div class="card">
+        <h3>지도로 한눈에 보기</h3>
+        <p style="margin-bottom:8px;">멤버들의 위치와 중간 지점을 지도에서 확인해보세요.</p>
+        <div id="mapContainer"></div>
+        <div class="map-legend">
+          <span><i class="dot you"></i>나</span>
+          <span><i class="dot friend"></i>다른 멤버</span>
+          <span><i class="dot mid"></i>중간 지점</span>
+        </div>
+        <p style="margin-top:10px;">아래 추천 장소 카드에서 <strong>"동선 보기"</strong>를 누르면, 각 멤버 위치에서 그 장소까지 지도에 점선으로 표시돼요.</p>
+        <div id="routeArea"></div>
+      </div>
+
+      <div class="card">
+        <h3>AI 중간 장소 추천</h3>
+        <p style="margin-bottom:8px;">멤버들의 주소와 원하는 카테고리를 바탕으로 중간 지점 근처의 장소를 찾아드려요.</p>
+        <label class="small">가격대 (선택)</label>
+        <select id="priceGroupPref" style="width:100%;border:1.5px solid var(--line); border-radius: 13px;padding:12px 14px;font-size:14px;margin-bottom:10px;font-family: inherit;background:#fff;">
+          <option value="">전체</option>
+          <option value="가성비">가성비 위주</option>
+          <option value="맛집">맛집(평 좋은 곳)</option>
+          <option value="프리미엄">프리미엄/고급</option>
+        </select>
+        <button class="primary" onclick="recommendLocation()">중간 장소 추천받기</button>
+        <div id="resultArea"></div>
+      </div>
+
+      <div class="card">
+        <h3>장소 비교하기</h3>
+        <p style="margin-bottom:8px;">두 가지 카테고리를 넣으면 중간 지점 근처에서 각각 후보를 찾아 나란히 비교해드려요.</p>
+        <div class="row">
+          <input type="text" id="compare" placeholder="예: 치킨">
+          <input type="text" id="compareB" placeholder="예: 떡볶이">
+        </div>
+        <label class="small">가격대 (선택)</label>
+        <select id="priceComparePref" style="width: 100%; border:1.5px solid var(--line); border-radius: 13px;padding:12px 14px; font-size:14px;margin-bottom:10px;font-family: inherit; background:#fff;">
+          <option value="">전체</option>
+          <option value="가성비">가성비 위주</option>
+          <option value="맛집">맛집(평 좋은 곳)</option>
+          <option value="프리미엄">프리미엄/고급</option>
+        </select>
+        <button class="dark" onclick="compareCategories()">비교하기</button>
+        <div id="compareArea"></div>
+      </div>
+
+    </div>
+  </div>
+</div></div>
+<div id="chatbot-launcher" onclick="toggleChatbot()">💬</div>
+<div id="chatbot-window">
+  <div id="chatbot-header">
+    <span>🤖 AI 어시스턴트</span>
+    <span style="cursor:pointer;" onclick="toggleChatbot()">X</span>
+  </div>
+  <div id="chatbot-messages">
+    <div class="chat-bubble bot">안녕하세요! 장소 추천이나 모임 조율에 대해 궁금한 점을 편하게 물어보세요!</div>
+  </div>
+  <div id="chatbot-footer">
+    <input type="text" id="chatbot-input" placeholder="메시지를 입력하세요..." onkeypress="if(event.keyCode==13) sendBotMessage()">
+    <button id="chatbot-send" onclick="sendBotMessage()">전송</button>
+  </div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, collection, addDoc, query, where, onSnapshot, getDocs, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+// 파이어베이스 설정 (본인 정보 유지)
+    const firebaseConfig = {
+        apiKey: "AIzaSyCuFkfVGEBOw0DgFc_HHFVNwH7MygwywFo",
+        authDomain: "database-f30fe.firebaseapp.com",
+        projectId: "database-f30fe",
+        storageBucket: "database-f30fe.firebasestorage.app",
+        messagingSenderId: "297111267801",
+        appId: "1:297111267801:web:785326fe551b9244a251c8",
+        measurementId: "G-8Y2KEDEQPD"
+    };
+    
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+
+    let currentUserNickname = "";
+    let currentGroupName = "";
+    let currentGroupId = "";
+    let lastParticipants = [];
+    
+    let groupUnsub = null;
+    let messagesUnsub = null;
+    let votesUnsub = null;
+    let voteCounts = {};
+    let myVotes = new Set();
+    let lastMessageCount = 0;
+    let currentGroupData = { confirmedDate: null, confirmedPlace: null };
+    let prevParticipantCount = 0;
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const pendingInviteGroupId = urlParams.get("group");
+
+window.signUp = async () => {
+  const email = document.getElementById("signupEmail").value.trim();
+  const password = document.getElementById("signupPassword").value;
+  const nickname = document.getElementById("nickname").value.trim();
+  if (!email || !password || !nickname) return alert("닉네임, 이메일, 비밀번호를 모두 입력해주세요!");
+  try {
+    await createUserWithEmailAndPassword(auth, email, password);
+    await addDoc(collection(db, "User"), { email, nickname });
+    currentUserNickname = nickname;
+    alert(`회원가입 완료! 환영합니다, ${nickname}님!`);
+    enterService();
+  } catch (e) { alert("회원가입 실패: " + friendlyAuthError(e)); }
+};
+
+window.signIn = async () => {
+  const email = document.getElementById("email").value.trim();
+  const password = document.getElementById("password").value;
+  if (!email || !password) return alert("이메일과 비밀번호를 입력해주세요!");
+  try {
+    await signInWithEmailAndPassword(auth, email, password);
+    const q = query(collection(db, "User"), where("email", "==", email));
+    const snap = await getDocs(q);
+    snap.forEach(doc => { currentUserNickname = doc.data().nickname; });
+    enterService();
+  } catch (e) { alert("로그인 실패: " + friendlyAuthError(e)); }
+};
+
+function friendlyAuthError(e) {
+  const map = {
+    "auth/email-already-in-use": "이미 가입된 이메일입니다.",
+    "auth/invalid-email": "이메일 형식이 올바르지 않습니다.",
+    "auth/weak-password": "비밀번호는 6자 이상이어야 합니다.",
+    "auth/invalid-credential": "이메일 또는 비밀번호가 올바르지 않습니다.",
+    "auth/user-not-found": "가입되지 않은 이메일입니다.",
+    "auth/wrong-password": "비밀번호가 올바르지 않습니다."
+  };
+  return map[e.code] || e.message;
+}
+
+function showToast(message) {
+  const stack = document.getElementById("toastStack");
+  if (!stack) return;
+  const el = document.createElement("div");
+  el.className = "toast";
+  el.innerText = message;
+  stack.appendChild(el);
+  setTimeout(() => el.remove(), 3000);
+}
+
+async function enterService() {
+  document.getElementById("authArea").style.display = "none";
+  document.getElementById("mainServiceArea").style.display = "block";
+  document.getElementById("whoAmI").innerText = currentUserNickname ? `${currentUserNickname}님` : "";
+  
+  // 김경은.pdf 화면 전환 적용
+  document.getElementById("groupSelectionArea").style.display = "block";
+  document.getElementById("actionArea").style.display = "none";
+
+  loadMyGroups();
+  if (pendingInviteGroupId) {
+    await joinGroupById(pendingInviteGroupId, true);
+  }
+}
+
+window.copyInviteLink = async () => {
+  const input = document.getElementById("inviteLinkInput");
+  input.select();
+  try {
+    await navigator.clipboard.writeText(input.value);
+    alert("초대 링크가 복사되었어요!");
+  } catch (e) { alert("복사에 실패했어요. 직접 선택해서 복사해주세요."); }
+};
+
+window.createGroup = async () => {
+  const name = document.getElementById("newGroupName").value.trim();
+  if (!name) return alert("그룹 이름을 입력하세요!");
+  const groupRef = await addDoc(collection(db, "groups"), { name });
+  const inviteLink = `${window.location.origin}${window.location.pathname}?group=${groupRef.id}`;
+  document.getElementById("inviteLinkInput").value = inviteLink;
+  document.getElementById("inviteLinkBox").style.display = "block";
+  alert("그룹 생성 완료! 초대 링크를 복사해서 친구에게 보내보세요.");
+  document.getElementById("newGroupName").value = "";
+  await enterGroup(groupRef.id, name, false);
+};
+
+window.joinGroup = async () => {
+  const name = document.getElementById("searchGroupName").value.trim();
+  if (!name) return alert("참여할 그룹 이름을 입력하세요!");
+  const q = query(collection(db, "groups"), where("name", "==", name));
+  const querySnapshot = await getDocs(q);
+  if (querySnapshot.empty) return alert("존재하지 않는 그룹입니다.");
+  const groupDoc = querySnapshot.docs[0];
+  await enterGroup(groupDoc.id, groupDoc.data().name, false);
+};
+
+async function joinGroupById(groupId, fromInvite) {
+  try {
+    const snap = await getDoc(doc(db, "groups", groupId));
+    if (!snap.exists()) {
+      if (fromInvite) alert("초대 링크가 유효하지 않아요. 그룹이 존재하지 않습니다.");
+      return;
+    }
+    await enterGroup(groupId, snap.data().name, fromInvite);
+  } catch (e) {
+    console.error(e);
+    if (fromInvite) alert("초대 링크로 그룹에 참여하는 데 실패했어요.");
+  }
+}
+
+async function enterGroup(groupId, name, fromInvite) {
+  currentGroupId = groupId;
+  currentGroupName = name;
+  document.getElementById("currentGroupTitle").innerText = `참여 중: ${currentGroupName}`;
+  
+  // 김경은.pdf 화면 전환 적용
+  document.getElementById("groupSelectionArea").style.display = "none";
+  document.getElementById("actionArea").style.display = "block";
+  
+  document.getElementById("resultArea").innerHTML = "";
+  document.getElementById("compareArea").innerHTML = "";
+  document.getElementById("dateResultArea").innerHTML = "";
+  document.getElementById("chatMessages").innerHTML = "";
+  document.getElementById("summaryCard").style.display = "none";
+  document.getElementById("confirmBanner").style.display = "none";
+  
+  lastMessageCount = 0;
+  prevParticipantCount = 0;
+  voteCounts = {};
+  myVotes = new Set();
+  
+  const banner = document.getElementById("inviteBannerCard");
+  if (fromInvite) {
+    document.getElementById("inviteBannerText").innerText = `"${currentGroupName}" 모임에 초대되었어요! 아래 달력에서 모일 수 있는 날짜를 골라주세요.`;
+    banner.style.display = "block";
+  } else {
+    banner.style.display = "none";
+  }
+  
+  renderCalendar();
+  loadParticipants();
+  loadMyAvailability();
+  recordMembership(groupId, name);
+  subscribeToGroupDoc(groupId);
+  subscribeToMessages(groupId);
+  subscribeToVotes(groupId);
+  
+  if (fromInvite) {
+    document.getElementById("actionArea").scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+}
+
+// 김경은.pdf 홈 화면 돌아가기
+window.goHome = () => {
+  currentGroupId = "";
+  currentGroupName = "";
+  document.getElementById("groupSelectionArea").style.display = "block";
+  document.getElementById("actionArea").style.display = "none";
+  window.history.replaceState({}, document.title, window.location.pathname);
+};
+
+async function recordMembership(groupId, groupName) {
+  try {
+    const q = query(collection(db, "Membership"), where("groupId", "==", groupId), where("user", "==", currentUserNickname));
+    const snap = await getDocs(q);
+    if (snap.empty) {
+      await addDoc(collection(db, "Membership"), { groupId, groupName, user: currentUserNickname });
+    }
+    loadMyGroups();
+  } catch (e) { console.error(e); }
+}
+
+async function loadMyGroups() {
+  const box = document.getElementById("myGroupsList");
+  if (!box || !currentUserNickname) return;
+  try {
+    const q = query(collection(db, "Membership"), where("user", "==", currentUserNickname));
+    const snap = await getDocs(q);
+    if (snap.empty) {
+      box.innerHTML = '<div class="empty">아직 참여한 그룹이 없어요.</div>';
+      return;
+    }
+    const seen = new Set();
+    let html = "";
+    snapshot.forEach((docSnap) => {
+      const d = docSnap.data();
+      lastParticipants.push(d);
+      const li = document.createElement("li");
+      li.className = "member";
+      const isMe = d.user === currentUserNickname; 
+      li.innerHTML = `
+        <div class="avatar">${(d.user || "?").charAt(0)}</div>
+        <div style="flex:1;">
+          <div><strong>${escapeHtml(d.user)}</strong></div>
+          <div class="meta">${escapeHtml(d.address)}${d.categories && d.categories.length ? " " + d.categories.map(escapeHtml).join(", ") : ""}</div>
+        </div>
+        ${isMe ? `<button class="ghost" style="width:auto; padding:4px 8px; font-size:12px; color:var(--danger);" onclick="deleteMyAddress('${docSnap.id}')">삭제</button>` : ""}
+      `;
+      list.appendChild(li);
+    });
+    box.innerHTML = html || '<div class="empty">아직 참여한 그룹이 없어요.</div>';
+  } catch (e) { console.error(e); }
+}
+
+window.jumpToGroup = async (groupId, groupName) => {
+  await enterGroup(groupId, groupName, false);
+  document.getElementById("actionArea").scrollIntoView({ behavior: "smooth", block: "start" });
+};
+
+function subscribeToGroupDoc(groupId) {
+  if (groupUnsub) groupUnsub();
+  groupUnsub = onSnapshot(doc(db, "groups", groupId), (snap) => {
+    if (!snap.exists()) return;
+    const data = snap.data();
+    const prev = currentGroupData;
+    if (data.confirmedDate && data.confirmedDate !== prev.confirmedDate) {
+      showToast(`모임 날짜가 ${formatDateKey(data.confirmedDate)}로 확정되었어요!`);
+    }
+    if (data.confirmedPlace && (!prev.confirmedPlace || data.confirmedPlace.name !== prev.confirmedPlace.name)) {
+      showToast(`모임 장소가 "${data.confirmedPlace.name}"으로 확정되었어요!`);
+    }
+    currentGroupData = { confirmedDate: data.confirmedDate || null, confirmedPlace: data.confirmedPlace || null };
+    renderConfirmBanner();
+    renderSummaryCard();
+  });
+}
+
+function renderConfirmBanner() {
+  const el = document.getElementById("confirmBanner");
+  const { confirmedDate, confirmedPlace } = currentGroupData;
+  if (!confirmedDate && !confirmedPlace) {
+    el.style.display = "none";
+    el.innerHTML = "";
+    return;
+  }
+  el.style.display = "block";
+  el.innerHTML = `
+    <div class="confirm-banner">
+      <span class="badge">모임 확정 정보</span>
+      ${confirmedDate ? `<div class="line">날짜: <strong>${escapeHtml(formatDateKey(confirmedDate))}</strong></div>` : `<div class="line">날짜: 아직 미정</div>`}
+      ${confirmedPlace ? `<div class="line">장소: <strong>${escapeHtml(confirmedPlace.name)}</strong> (${escapeHtml(confirmedPlace.address || "")}) </div>` : `<div class="line">장소: 아직 미정</div>`}
+    </div>`;
+}
+
+window.saveMyAddress = async () => {
+  const address = document.getElementById("userAddress").value.trim();
+  const categoriesRaw = document.getElementById("userCategories").value.trim();
+  if (!address) return alert("주소를 입력하세요!");
+  if (typeof kakao === "undefined" || !kakao.maps || !kakao.maps.services) {
+    return alert("카카오 지도 API 키가 설정되지 않았습니다. HTML 상단의 appkey를 채워주세요.");
+  }
+  try {
+    const { lat, lng } = await geocodeAddress(address);
+    const categories = categoriesRaw ? categoriesRaw.split(",").map(s => s.trim()).filter(Boolean) : [];
+    
+    // 김경은.pdf 주소 중복 저장 방지 로직 적용
+    const q = query(collection(db, "Participant"), where("groupId", "==", currentGroupId), where("user", "==", currentUserNickname));
+    const snap = await getDocs(q);
+    if (snap.empty) {
+      await addDoc(collection(db, "Participant"), {
+        group: currentGroupName, groupId: currentGroupId, user: currentUserNickname, address, lat, lng, categories
+      });
+    } else {
+      await updateDoc(doc(db, "Participant", snap.docs[0].id), { address, lat, lng, categories });
+    }
+    alert("저장 완료!");
+  } catch (e) { alert("주소 변환에 실패했어요: " + e.message + "\n도로명 주소를 다시 확인해주세요."); }
+};
+
+function geocodeAddress(address) {
+  return new Promise((resolve, reject) => {
+    const geocoder = new kakao.maps.services.Geocoder();
+    geocoder.addressSearch(address, (result, status) => {
+      if (status === kakao.maps.services.Status.OK) {
+        resolve({ lat: parseFloat(result[0].y), lng: parseFloat(result[0].x) });
+      } else {
+        reject(new Error("해당 주소를 찾을 수 없습니다."));
+      }
+    });
+  });
+}
+
+function loadParticipants() {
+  const q = query(collection(db, "Participant"), where("groupId", "==", currentGroupId));
+  onSnapshot(q, (snapshot) => {
+    const list = document.getElementById("participantList");
+    list.innerHTML = "";
+    lastParticipants = [];
+    if (snapshot.empty) {
+      list.innerHTML = '<div class="empty">아직 등록된 멤버가 없어요.</div>';
+      updateMapView([], null);
+      if (prevParticipantCount > 0) prevParticipantCount = 0;
+      return;
+    }
+    snapshot.forEach((doc) => {
+      const d = doc.data();
+      lastParticipants.push(d);
+      const li = document.createElement("li");
+      li.className = "member";
+      li.innerHTML = `
+        <div class="avatar">${(d.user || "?").charAt(0)}</div>
+        <div>
+          <div><strong>${escapeHtml(d.user)}</strong></div>
+          <div class="meta">${escapeHtml(d.address)}${d.categories && d.categories.length ? " " + d.categories.map(escapeHtml).join(", ") : ""}</div>
+        </div>`;
+      list.appendChild(li);
+    });
+    if (prevParticipantCount > 0 && lastParticipants.length > prevParticipantCount) {
+      showToast("새 멤버가 참여했어요!");
+    }
+    prevParticipantCount = lastParticipants.length;
+    updateMapView(lastParticipants, computeMidpoint(lastParticipants));
+  });
+}
+
+function computeMidpoint(participants) {
+  const valid = participants.filter(p => typeof p.lat === "number" && typeof p.lng === "number");
+  if (valid.length === 0) return null;
+  const lat = valid.reduce((s, p) => s + p.lat, 0) / valid.length;
+  const lng = valid.reduce((s, p) => s + p.lng, 0) / valid.length;
+  return { lat, lng };
+}
+
+let kakaoMap = null;
+let mapOverlays = [];
+let routeLines = [];
+let lastPlaces = [];
+
+function haversineKm(lat1, lng1, lat2, lng2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function clearRouteLines() {
+  routeLines.forEach(l => l.setMap(null));
+  routeLines = [];
+}
+
+function registerPlace(place) {
+  const idx = lastPlaces.length;
+  lastPlaces.push({
+    name: place.place_name,
+    address: place.road_address_name || place.address_name || "",
+    lat: parseFloat(place.y),
+    lng: parseFloat(place.x)
+  });
+  return idx;
+}
+
+window.showRouteToPlace = (idx) => {
+  const place = lastPlaces[idx];
+  if (!place) return;
+  const map = ensureMap();
+  if (!map) return;
+  const valid = lastParticipants.filter(p => typeof p.lat === "number" && typeof p.lng === "number");
+  if (valid.length === 0) {
+    alert("멤버 위치 정보가 없어서 동선을 그릴 수 없어요.");
+    return;
+  }
+  clearRouteLines();
+  const bounds = new kakao.maps.LatLngBounds();
+  const placePos = new kakao.maps.LatLng(place.lat, place.lng);
+  bounds.extend(placePos);
+  
+  let listHtml = `<div class="card" style="margin-top:12px;"><h3>"${escapeHtml(place.name)}"까지 동선</h3>`;
+  valid.forEach(p => {
+    const isMe = p.user === currentUserNickname;
+    const pos = new kakao.maps.LatLng(p.lat, p.lng);
+    bounds.extend(pos);
+    const line = new kakao.maps.Polyline({
+      path: [pos, placePos], strokeWeight: 3, strokeColor: isMe ? "#7c6df2" : "#221f36",
+      strokeOpacity: 0.75, strokeStyle: "shortdash"
+    });
+    line.setMap(map);
+    routeLines.push(line);
+    const distKm = haversineKm(p.lat, p.lng, place.lat, place.lng).toFixed(1);
+    const directionsUrl = `https://map.kakao.com/link/from/${encodeURIComponent(p.user)},${p.lat},${p.lng}/to/${encodeURIComponent(place.name)},${place.lat},${place.lng}`;
+    listHtml += `
+      <div class="place-card">
+        <div class="name">${escapeHtml(p.user)}${isMe ? " (나)" : ""}</div>
+        <div class="addr">직선거리 약 ${distKm}km</div>
+        <a href="${directionsUrl}" target="_blank" rel="noopener">카카오맵에서 실제 길찾기</a>
+      </div>`;
+  });
+  listHtml += '</div>';
+  document.getElementById("routeArea").innerHTML = listHtml;
+  kakao.maps.event.trigger(map, "resize");
+  map.setBounds(bounds, 60, 60, 60, 60);
+  document.getElementById("mapContainer").scrollIntoView({ behavior: "smooth", block: "center" });
+};
+
+function ensureMap() {
+  const container = document.getElementById("mapContainer");
+  if (!container) return null;
+  if (typeof kakao === "undefined" || !kakao.maps) return null;
+  if (!kakaoMap) {
+    kakaoMap = new kakao.maps.Map(container, { center: new kakao.maps.LatLng(37.5665, 126.9780), level: 7 });
+  }
+  return kakaoMap;
+}
+
+function clearMapOverlays() {
+  mapOverlays.forEach(o => o.setMap(null));
+  mapOverlays = [];
+}
+
+function pinOverlayHtml(label, bg, textColor, big) {
+  const size = big ? 40 : 34;
+  return `
+    <div style="display: flex; flex-direction:column; align-items:center; transform: translateY(-${size + 6}px);">
+      <div style="background:${bg}; color:${textColor}; width:${size}px; height:${size}px; border-radius: 50% 50% 50% 0; transform:rotate(45deg); display: flex; align-items:center; justify-content:center; box-shadow:0 6px 14px rgba(0,0,0,.28); border:2px solid #fff;">
+        <span style="transform:rotate(-45deg); font-size:${big ? 13 : 12}px; font-weight:800;">${label}</span>
+      </div>
+    </div>`;
+}
+
+function updateMapView(participants, midpoint) {
+  const map = ensureMap();
+  if (!map) return;
+  clearMapOverlays();
+  clearRouteLines();
+  const routeArea = document.getElementById("routeArea");
+  if (routeArea) routeArea.innerHTML = "";
+  
+  const valid = participants.filter(p => typeof p.lat === "number" && typeof p.lng === "number");
+  const bounds = new kakao.maps.LatLngBounds();
+  valid.forEach(p => {
+    const isMe = p.user === currentUserNickname;
+    const pos = new kakao.maps.LatLng(p.lat, p.lng);
+    const overlay = new kakao.maps.CustomOverlay({
+      position: pos, content: pinOverlayHtml(escapeHtml((p.user || "?").charAt(0)), isMe ? "#7c6df2" : "#221f36", "#ffffff", false),
+      yAnchor: 1, zIndex: isMe ? 3 : 2
+    });
+    overlay.setMap(map);
+    mapOverlays.push(overlay);
+    bounds.extend(pos);
+  });
+  
+  if (midpoint) {
+    const midPos = new kakao.maps.LatLng(midpoint.lat, midpoint.lng);
+    const overlay = new kakao.maps.CustomOverlay({
+      position: midPos, content: pinOverlayHtml("★", "#e88f3a", "#2b1c08", true), yAnchor: 1, zIndex: 4
+    });
+    overlay.setMap(map);
+    mapOverlays.push(overlay);
+    bounds.extend(midPos);
+  }
+  
+  kakao.maps.event.trigger(map, "resize");
+  if (valid.length > 0) {
+    map.setBounds(bounds, 60, 60, 60, 60);
+  } else if (midpoint) {
+    map.setCenter(new kakao.maps.LatLng(midpoint.lat, midpoint.lng));
+  }
+}
+
+function searchPlaces(keyword, lat, lng, radius = 3000) {
+  return new Promise((resolve) => {
+    if (typeof kakao === "undefined" || !kakao.maps.services) return resolve([]);
+    const ps = new kakao.maps.services.Places();
+    ps.keywordSearch(keyword, (data, status) => {
+      if (status === kakao.maps.services.Status.OK) resolve(data);
+      else resolve([]);
+    }, { location: new kakao.maps.LatLng(lat, lng), radius, sort: kakao.maps.services.SortBy.ACCURACY });
+  });
+}
+
+function placeCardHtml(place) {
+  const idx = registerPlace(place);
+  const name = place.place_name;
+  const voteCount = voteCounts[name] || 0;
+  const voted = myVotes.has(name);
+  return `
+    <div class="place-card">
+      <div class="name">${escapeHtml(place.place_name)}</div>
+      <div class="cat">${escapeHtml((place.category_name || "").split(">").pop().trim())}</div>
+      <div class="addr">${escapeHtml(place.road_address_name || place.address_name)}</div>
+      <div class="addr">중간 지점에서 약 ${place.distance ? Math.round(place.distance) + "m" : "-"}</div>
+      <a href="${place.place_url}" target="_blank" rel="noopener">카카오맵에서 리뷰 보기 →</a>
+      <div class="vote-row">
+        <button class="vote-btn ${voted ? "voted" : ""}" type="button" data-vote-name="${escapeHtml(name)}" onclick="toggleVote(${idx})">투표${voted ? "함" : "하기"}</button>
+        <span class="vote-count" data-vote-count-name="${escapeHtml(name)}">${voteCount}표</span>
+      </div>
+      <div class="row" style="margin-top:8px;">
+        <button class="chip" type="button" onclick="showRouteToPlace(${idx})">동선 보기</button>
+        <button class="chip" type="button" onclick="confirmPlace(${idx})">이 장소로 확정</button>
+      </div>
+    </div>`;
+}
+
+window.recommendLocation = async () => {
+  if (lastParticipants.length < 2) return alert("멤버가 2명 이상이어야 추천할 수 있어요.");
+  const mid = computeMidpoint(lastParticipants);
+  if (!mid) return alert("먼저 멤버들의 주소가 등록되어야 해요.");
+  const resultArea = document.getElementById("resultArea");
+  resultArea.innerHTML = '<div class="empty">추천 장소를 찾고 있어요...</div>';
+  lastPlaces = [];
+  clearRouteLines();
+  document.getElementById("routeArea").innerHTML = "";
+  
+  let categories = [...new Set(lastParticipants.flatMap(p => p.categories || []))];
+  if (categories.length === 0) categories = ["맛집", "카페"];
+  const pricePref = document.getElementById("priceGroupPref").value;
+  let html = '<div class="lead">중간 지점 근처, 멤버들이 원한 카테고리 기준 추천이에요.</div>';
+  
+  for (const cat of categories) {
+    const keyword = pricePref ? `${cat} ${pricePref}` : cat;
+    const places = await searchPlaces(keyword, mid.lat, mid.lng);
+    html += `<h3 style="margin-top:12px;">${escapeHtml(cat)}</h3>`;
+    if (places.length === 0) {
+      html += `<div class="empty">근처에서 "${escapeHtml(cat)}" 관련 장소를 찾지 못했어요.</div>`;
+    } else {
+      html += placeCardHtml(places[0]);
+    }
+  }
+  resultArea.innerHTML = html;
+};
+
+window.compareCategories = async () => {
+  if (lastParticipants.length < 2) return alert("멤버가 2명 이상이어야 비교할 수 있어요.");
+  const mid = computeMidpoint(lastParticipants);
+  if (!mid) return alert("먼저 멤버들의 주소가 등록되어야 해요.");
+  const catA = document.getElementById("compare").value.trim();
+  const catB = document.getElementById("compareB").value.trim();
+  if (!catA || !catB) return alert("비교할 카테고리 두 개를 모두 입력해주세요.");
+  const compareArea = document.getElementById("compareArea");
+  compareArea.innerHTML = '<div class="empty">비교 중이에요...</div>';
+  lastPlaces = [];
+  clearRouteLines();
+  document.getElementById("routeArea").innerHTML = "";
+  const pricePref = document.getElementById("priceComparePref").value;
+  
+  const [placesA, placesB] = await Promise.all([
+    searchPlaces(pricePref ? `${catA} ${pricePref}` : catA, mid.lat, mid.lng),
+    searchPlaces(pricePref ? `${catB} ${pricePref}` : catB, mid.lat, mid.lng)
+  ]);
+  
+  const colHtml = (label, places) => {
+    let inner = `<h3>${escapeHtml(label)}</h3>`;
+    if (places.length === 0) {
+      inner += '<div class="empty">결과가 없어요.</div>';
+    } else {
+      inner += places.slice(0, 3).map(placeCardHtml).join("");
+    }
+    return `<div class="col">${inner}</div>`;
+  };
+  
+  compareArea.innerHTML = `
+    <div class="lead">카카오맵 검색 기준 상위 결과예요. 실제 평점 리뷰는 링크에서 확인해보세요.</div>
+    <div class="compare-cols">
+      ${colHtml(catA, placesA)}
+      ${colHtml(catB, placesB)}
+    </div>`;
+};
+
+let calendarViewDate = new Date();
+let selectedDates = new Set();
+function pad2(n) { return String(n).padStart(2, "0"); }
+function toDateKey(y, m, d) { return `${y}-${pad2(m + 1)}-${pad2(d)}`; }
+
+window.changeCalendarMonth = (delta) => {
+  calendarViewDate.setMonth(calendarViewDate.getMonth() + delta);
+  renderCalendar();
+};
+
+function renderCalendar() {
+  const grid = document.getElementById("calendarGrid");
+  const label = document.getElementById("calendarMonthLabel");
+  if (!grid || !label) return;
+  const y = calendarViewDate.getFullYear();
+  const m = calendarViewDate.getMonth();
+  label.innerText = `${y}년 ${m + 1}월`;
+  const firstDay = new Date(y, m, 1).getDay();
+  const daysInMonth = new Date(y, m + 1, 0).getDate();
+  const weekLabels = ["일", "월", "화", "수", "목", "금", "토"];
+  
+  let html = '<div style="display:grid;grid-template-columns: repeat(7,1fr); gap:4px; text-align:center;">';
+  weekLabels.forEach((w, i) => {
+    html += `<div style="font-size:11px; font-weight:700; color:${i === 0 ? "var(--danger)" : "var(--ink-soft)"}; padding: 4px 0;">${w}</div>`;
+  });
+  for (let i = 0; i < firstDay; i++) html += '<div></div>';
+  for (let d = 1; d <= daysInMonth; d++) {
+    const key = toDateKey(y, m, d);
+    const isSelected = selectedDates.has(key);
+    html += `<button type="button" class="chip" style="margin:0;padding: 8px 0;border-radius:10px;${isSelected ? "background: var(--accent); color: var(--ink); border-color:var(--accent);" : ""}" onclick="toggleDate('${key}')">${d}</button>`;
+  }
+  html += '</div>';
+  grid.innerHTML = html;
+}
+
+window.toggleDate = (key) => {
+  if (selectedDates.has(key)) selectedDates.delete(key);
+  else selectedDates.add(key);
+  renderCalendar();
+};
+
+window.saveMyAvailability = async () => {
+  if (!currentGroupId) return alert("먼저 그룹에 참여해주세요.");
+  if (selectedDates.size === 0) return alert("달력에서 날짜를 하나 이상 선택해주세요.");
+  const dates = [...selectedDates].sort();
+  try {
+    const q = query(collection(db, "Availability"), where("groupId", "==", currentGroupId), where("user", "==", currentUserNickname));
+    const snap = await getDocs(q);
+    if (snap.empty) {
+      await addDoc(collection(db, "Availability"), { groupId: currentGroupId, group: currentGroupName, user: currentUserNickname, dates });
+    } else {
+      await updateDoc(doc(db, "Availability", snap.docs[0].id), { dates });
+    }
+    alert("가능한 날짜가 저장되었어요!");
+  } catch (e) {
+    console.error(e);
+    alert("날짜 저장에 실패했어요: " + e.message);
+  }
+};
+
+async function loadMyAvailability() {
+  if (!currentGroupId) return;
+  try {
+    const q = query(collection(db, "Availability"), where("groupId", "==", currentGroupId), where("user", "==", currentUserNickname));
+    const snap = await getDocs(q);
+    selectedDates = new Set();
+    if (!snap.empty) {
+      const data = snap.docs[0].data();
+      (data.dates || []).forEach(d => selectedDates.add(d));
+    }
+    renderCalendar();
+  } catch (e) { console.error(e); }
+}
+
+window.recommendDate = async () => {
+  if (!currentGroupId) return alert("먼저 그룹에 참여해주세요.");
+  const resultArea = document.getElementById("dateResultArea");
+  resultArea.innerHTML = '<div class="empty">멤버들의 가능한 날짜를 모으고 있어요...</div>';
+  try {
+    const q = query(collection(db, "Availability"), where("groupId", "==", currentGroupId));
+    const snap = await getDocs(q);
+    if (snap.empty) {
+      resultArea.innerHTML = '<div class="empty">아직 아무도 가능한 날짜를 등록하지 않았어요.</div>';
+      return;
+    }
+    const entries = snap.docs.map(d => d.data());
+    const totalMembers = entries.length;
+    const tally = {};
+    entries.forEach(e => {
+      (e.dates || []).forEach(dateKey => {
+        if (!tally[dateKey]) tally[dateKey] = { count: 0, people: [] };
+        tally[dateKey].count += 1;
+        tally[dateKey].people.push(e.user);
+      });
+    });
+    
+    const ranked = Object.entries(tally)
+      .map(([dateKey, info]) => ({ dateKey, ...info }))
+      .sort((a, b) => (b.count - a.count) || a.dateKey.localeCompare(b.dateKey))
+      .slice(0, 5);
+      
+    if (ranked.length === 0) {
+      resultArea.innerHTML = '<div class="empty">등록된 날짜가 없어요.</div>';
+      return;
+    }
+    
+    let html = `<div class="lead">전체 ${totalMembers}명 중 가장 많이 겹치는 날짜예요.</div>`;
+    ranked.forEach((r, idx) => {
+      const isFull = r.count === totalMembers;
+      html += `
+        <div class="place-card">
+          <div class="name">${idx + 1}위 · ${escapeHtml(formatDateKey(r.dateKey))}${isFull ? " 🎉 전원 가능" : ""}</div>
+          <div class="cat">${r.count}/${totalMembers}명 가능</div>
+          <div class="addr">${r.people.map(escapeHtml).join(", ")}</div>
+          <div style="margin-top:8px;">
+            <button class="chip" type="button" onclick="confirmDate('${r.dateKey}')">이 날짜로 확정</button>
+          </div>
+        </div>`;
+    });
+    resultArea.innerHTML = html;
+  } catch (e) {
+    console.error(e);
+    resultArea.innerHTML = `<div class="empty">추천에 실패했어요: ${escapeHtml(e.message)}</div>`;
+  }
+};
+
+function formatDateKey(key) {
+  const [y, m, d] = key.split("-").map(Number);
+  const dt = new Date(y, m - 1, d);
+  const weekLabels = ["일", "월", "화", "수", "목", "금", "토"];
+  return `${y}년 ${m}월 ${d}일 (${weekLabels[dt.getDay()]})`;
+}
+
+window.confirmDate = async (dateKey) => {
+  if (!currentGroupId) return;
+  try {
+    await updateDoc(doc(db, "groups", currentGroupId), { confirmedDate: dateKey });
+    alert(`모임 날짜가 ${formatDateKey(dateKey)}로 확정되었어요!`);
+  } catch (e) {
+    console.error(e);
+    alert("날짜 확정에 실패했어요: " + e.message);
+  }
+};
+
+window.confirmPlace = async (idx) => {
+  if (!currentGroupId) return;
+  const place = lastPlaces[idx];
+  if (!place) return;
+  try {
+    await updateDoc(doc(db, "groups", currentGroupId), {
+      confirmedPlace: { name: place.name, address: place.address, lat: place.lat, lng: place.lng }
+    });
+    alert(`모임 장소가 "${place.name}"(으)로 확정되었어요!`);
+  } catch (e) {
+    console.error(e);
+    alert("장소 확정에 실패했어요: " + e.message);
+  }
+};
+
+function subscribeToVotes(groupId) {
+  if (votesUnsub) votesUnsub();
+  const q = query(collection(db, "Votes"), where("groupId", "==", groupId));
+  votesUnsub = onSnapshot(q, (snap) => {
+    const counts = {};
+    const mine = new Set();
+    snap.forEach(d => {
+      const v = d.data();
+      counts[v.placeName] = (counts[v.placeName] || 0) + 1;
+      if (v.user === currentUserNickname) mine.add(v.placeName);
+    });
+    voteCounts = counts;
+    myVotes = mine;
+    refreshVoteDisplays();
+  });
+}
+
+function refreshVoteDisplays() {
+  document.querySelectorAll("[data-vote-count-name]").forEach(el => {
+    const name = el.getAttribute("data-vote-count-name");
+    el.innerText = `${voteCounts[name] || 0}표`;
+  });
+  document.querySelectorAll("[data-vote-name]").forEach(el => {
+    const name = el.getAttribute("data-vote-name");
+    const voted = myVotes.has(name);
+    el.classList.toggle("voted", voted);
+    el.innerText = voted ? "투표함" : "투표하기";
+  });
+}
+
+window.toggleVote = async (idx) => {
+  if (!currentGroupId) return;
+  const place = lastPlaces[idx];
+  if (!place) return;
+  try {
+    const q = query(collection(db, "Votes"), where("groupId", "==", currentGroupId), where("placeName", "==", place.name), where("user", "==", currentUserNickname));
+    const snap = await getDocs(q);
+    if (snap.empty) {
+      await addDoc(collection(db, "Votes"), { groupId: currentGroupId, placeName: place.name, user: currentUserNickname });
+    } else {
+      await deleteDoc(doc(db, "Votes", snap.docs[0].id));
+    }
+  } catch (e) {
+    console.error(e);
+    alert("투표에 실패했어요: " + e.message);
+  }
+};
+
+function subscribeToMessages(groupId) {
+  if (messagesUnsub) messagesUnsub();
+  const q = query(collection(db, "Messages"), where("groupId", "==", groupId));
+  messagesUnsub = onSnapshot(q, (snap) => {
+    const msgs = snap.docs.map(d => d.data()).sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+    const box = document.getElementById("chatMessages");
+    box.innerHTML = msgs.map(m => `
+      <div class="chat-bubble ${m.user === currentUserNickname ? "me" : ""}">
+        <div class="chat-user">${escapeHtml(m.user)}</div>
+        <div>${escapeHtml(m.text)}</div>
+      </div>`).join("");
+    box.scrollTop = box.scrollHeight;
+    
+    if (lastMessageCount > 0 && msgs.length > lastMessageCount) {
+      const latest = msgs[msgs.length - 1];
+      if (latest && latest.user !== currentUserNickname) {
+        showToast(`${latest.user}: ${latest.text}`);
+      }
+    }
+    lastMessageCount = msgs.length;
+  });
+}
+
+window.sendMessage = async () => {
+  const input = document.getElementById("chatInput");
+  const text = input.value.trim();
+  if (!text) return;
+  if (!currentGroupId) return alert("먼저 그룹에 참여해주세요.");
+  try {
+    await addDoc(collection(db, "Messages"), { groupId: currentGroupId, user: currentUserNickname, text, createdAt: Date.now() });
+    input.value = "";
+  } catch (e) {
+    console.error(e);
+    alert("메시지 전송에 실패했어요: " + e.message);
+  }
+};
+
+async function renderSummaryCard() {
+  const card = document.getElementById("summaryCard");
+  const content = document.getElementById("summaryContent");
+  const { confirmedDate, confirmedPlace } = currentGroupData;
+  if (!confirmedDate && !confirmedPlace) {
+    card.style.display = "none";
+    return;
+  }
+  card.style.display = "block";
+  const members = lastParticipants.map(p => p.user).join(", ") || "아직 없음";
+  let html = `
+    <div class="line" style="color:var(--ink); font-size:13px; margin:4px 0;"><strong>그룹:</strong> ${escapeHtml(currentGroupName)}</div>
+    <div class="line" style="color:var(--ink); font-size:13px; margin:4px 0;"><strong>날짜:</strong> ${confirmedDate ? escapeHtml(formatDateKey(confirmedDate)) : "미정"}</div>
+    <div class="line" style="color:var(--ink); font-size:13px; margin:4px 0;"><strong>장소:</strong> ${confirmedPlace ? escapeHtml(confirmedPlace.name) + " (" + escapeHtml(confirmedPlace.address || "") + ")" : "미정"}</div>
+    <div class="line" style="color:var(--ink); font-size:13px; margin:4px 0;"><strong>참석자:</strong> ${escapeHtml(members)}</div>`;
+  
+  content.innerHTML = html;
+  
+  if (confirmedDate && confirmedPlace) {
+    const weatherHtml = await fetchWeatherHtml(confirmedPlace.lat, confirmedPlace.lng, confirmedDate);
+    content.innerHTML += weatherHtml;
+  }
+}
+
+async function fetchWeatherHtml(lat, lng, dateKey) {
+  try {
+    const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=Asia%2FSeoul&start_date=${dateKey}&end_date=${dateKey}`);
+    const data = await res.json();
+    if (!data.daily || !data.daily.time || data.daily.time.length === 0) {
+      return `<div class="weather-box"><div class="desc">이 날짜는 아직 날씨 예보 범위(약 16일 이내) 밖이에요. 가까워지면 다시 확인해보세요.</div></div>`;
+    }
+    const max = data.daily.temperature_2m_max[0];
+    const min = data.daily.temperature_2m_min[0];
+    const rain = data.daily.precipitation_probability_max[0];
+    return `
+      <div class="weather-box">
+        <div class="temp">${Math.round(max)}° / ${Math.round(min)}°</div>
+        <div class="desc">강수확률 ${rain}% ${rain >= 50 ? "☔ 우산을 챙기세요!" : ""}</div>
+      </div>`;
+  } catch (e) {
+    console.error(e);
+    return `<div class="weather-box"><div class="desc">날씨 정보를 불러오지 못했어요.</div></div>`;
+  }
+}
+
+window.copySummary = async () => {
+  const { confirmedDate, confirmedPlace } = currentGroupData;
+  const members = lastParticipants.map(p => p.user).join(", ") || "미정";
+  const text = 
+    `[${currentGroupName} 모임 안내]\n` +
+    `🗓 날짜: ${confirmedDate ? formatDateKey(confirmedDate) : "미정"}\n` +
+    `📍 장소: ${confirmedPlace ? confirmedPlace.name + " (" + (confirmedPlace.address || "") + ")" : "미정"}\n` +
+    `👥 참석자: ${members}`;
+  try {
+    await navigator.clipboard.writeText(text);
+    alert("모임 요약이 복사되었어요! 카톡 등에 붙여넣기 해보세요.");
+  } catch (e) { alert("복사에 실패했어요. 직접 선택해서 복사해주세요."); }
+};
+
+function escapeHtml(str) {
+  if (str === undefined || str === null) return "";
+  return String(str).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
+}
+window.deleteMyAddress = async (docId) => {
+  if (!confirm("등록한 주소와 카테고리를 삭제하시겠어요?")) return;
+  try {
+    await deleteDoc(doc(db, "Participant", docId));
+    alert("주소가 삭제되었습니다.");
+  } catch (e) {
+    console.error(e);
+    alert("삭제 실패: " + e.message);
+  }
+};
+
+window.deleteMyGroup = async (docId) => {
+  if (!confirm("이 모임을 목록에서 삭제하시겠어요?\n(내 목록에서만 지워지며, 그룹 자체는 유지됩니다.)")) return;
+  try {
+    await deleteDoc(doc(db, "Membership", docId));
+    loadMyGroups();
+  } catch (e) {
+    console.error(e);
+    alert("삭제 실패: " + e.message);
+  }
+};
+</script>
+<script>
+// 팀원이 열어둔 ngrok 백엔드 서버 주소
+const NGROK_URL = 'https://barmaid-unexpired-spotty.ngrok-free.dev';
+
+// 챗봇 토글 함수
+function toggleChatbot() {
+  const win = document.getElementById('chatbot-window');
+  if (win.style.display === 'none' || win.style.display === '') {
+    win.style.display = 'flex';
+  } else {
+    win.style.display = 'none';
+  }
+}
+
+// 메시지 전송 로직
+async function sendBotMessage() {
+  const input = document.getElementById('chatbot-input');
+  const messageText = input.value.trim();
+  if (!messageText) return;
+
+  const msgContainer = document.getElementById('chatbot-messages');
+  
+  // 사용자 메시지 띄우기
+  const userBubble = document.createElement('div');
+  userBubble.className = 'chat-bubble user';
+  userBubble.innerText = messageText;
+  msgContainer.appendChild(userBubble);
+  
+  input.value = '';
+  msgContainer.scrollTop = msgContainer.scrollHeight;
+
+  // 봇 로딩 메시지 띄우기
+  const botBubble = document.createElement('div');
+  botBubble.className = 'chat-bubble bot';
+  botBubble.innerText = '생각 중...';
+  msgContainer.appendChild(botBubble);
+  msgContainer.scrollTop = msgContainer.scrollHeight;
+
+  // 백엔드 서버로 요청 보내기
+  try {
+    const response = await fetch(`${NGROK_URL}/api/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: messageText })
+    });
+    
+    if (!response.ok) throw new Error('서버 응답 오류');
+    
+    const data = await response.json();
+    botBubble.innerText = data.reply;
+    
+  } catch (error) {
+    botBubble.innerText = '⚠️ 서버와 연결할 수 없습니다. 팀원 분의 백엔드(ngrok)가 켜져 있는지 확인해 주세요.';
+  }
+  msgContainer.scrollTop = msgContainer.scrollHeight;
+}
+</script>
+</body>
+</html>
