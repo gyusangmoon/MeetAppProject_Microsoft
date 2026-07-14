@@ -157,9 +157,9 @@ ul.plain { list-style: none; padding: 0; margin: 0; }
 .map-legend { display: flex; gap: 14px; margin-top: 10px; flex-wrap: wrap; }
 .map-legend span { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--ink-soft); font-weight: 700; }
 .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
-.dot.you { background: var(--accent2); }
+.dot.you { background: #8f93f6; }
 .dot.friend { background: var(--ink); }
-.dot.mid { background: var(--accent-deep); }
+.dot.mid { background: #e29a0a; }
 #authArea {}
 #mainServiceArea { display: none; }
 #actionArea { display: none; }
@@ -205,7 +205,7 @@ button.vote-btn.voted { background: var(--accent-soft); border-color: var(--acce
 .my-group-item .name { font-weight: 800; font-size: 13px; color: var(--ink); }
 /* 챗봇 플로팅 버튼 및 채팅창 CSS 스타일 */
 #chatbot-launcher {
-  position: absolute;
+  position: fixed;
   bottom: 24px;
   right: 24px;
   width: 56px;
@@ -223,7 +223,7 @@ button.vote-btn.voted { background: var(--accent-soft); border-color: var(--acce
 }
 #chatbot-launcher:hover { transform: scale(1.05); }
 #chatbot-window {
-  position: absolute;
+  position: fixed;
   bottom: 90px;
   right: 24px;
   width: 320px;
@@ -353,9 +353,12 @@ button.vote-btn.voted { background: var(--accent-soft); border-color: var(--acce
     </div>
     
     <div id="actionArea">
-      <button class="ghost" onclick="goHome()" style="text-align:left; padding: 0 0 16px 4px; font-size:13px; color:var(--ink-soft); box-shadow:none;">&lt; 그룹 목록으로 (홈)</button>
-
-      <div class="card" id="inviteBannerCard" style="display:none;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <button class="ghost" onclick="goHome()" style="text-align:left; padding: 0 0 16px 4px; font-size:13px; color:var(--ink-soft); box-shadow:none; width:auto;">&lt; 그룹 목록으로</button>
+          <button class="ghost" onclick="resetGroup()" style="text-align:right; padding: 0 4px 16px 0; font-size:13px; color:var(--danger); box-shadow:none; width:auto;">다음 모임 준비 (초기화) 🔄</button>
+        </div>
+        
+        <div class="card" id="inviteBannerCard" style="display:none;">
         <span class="badge alt">초대받았어요</span>
         <p style="margin-bottom:0;" id="inviteBannerText"></p>
       </div>
@@ -475,7 +478,7 @@ button.vote-btn.voted { background: var(--accent-soft); border-color: var(--acce
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, collection, addDoc, query, where, onSnapshot, getDocs, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, query, where, onSnapshot, getDocs, doc, getDoc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
     import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
 // 파이어베이스 설정 (본인 정보 유지)
@@ -687,30 +690,32 @@ async function loadMyGroups() {
   try {
     const q = query(collection(db, "Membership"), where("user", "==", currentUserNickname));
     const snap = await getDocs(q);
+    
     if (snap.empty) {
       box.innerHTML = '<div class="empty">아직 참여한 그룹이 없어요.</div>';
       return;
     }
+    
     const seen = new Set();
     let html = "";
-    snapshot.forEach((docSnap) => {
-      const d = docSnap.data();
-      lastParticipants.push(d);
-      const li = document.createElement("li");
-      li.className = "member";
-      const isMe = d.user === currentUserNickname; 
-      li.innerHTML = `
-        <div class="avatar">${(d.user || "?").charAt(0)}</div>
-        <div style="flex:1;">
-          <div><strong>${escapeHtml(d.user)}</strong></div>
-          <div class="meta">${escapeHtml(d.address)}${d.categories && d.categories.length ? " " + d.categories.map(escapeHtml).join(", ") : ""}</div>
-        </div>
-        ${isMe ? `<button class="ghost" style="width:auto; padding:4px 8px; font-size:12px; color:var(--danger);" onclick="deleteMyAddress('${docSnap.id}')">삭제</button>` : ""}
-      `;
-      list.appendChild(li);
+    
+    snap.forEach(d => {
+      const data = d.data();
+      if (seen.has(data.groupId)) return;
+      seen.add(data.groupId);
+      
+      // 모임 목록 카드와 이동/삭제 버튼 생성
+      html += `<div class="my-group-item">
+        <span class="name" style="flex:1;">${escapeHtml(data.groupName)}</span>
+        <button class="chip" type="button" onclick="jumpToGroup('${data.groupId}', '${escapeHtml(data.groupName).replace(/'/g, "\\'")}')">join!</button>
+        <button class="chip" type="button" style="color:var(--danger); border-color:var(--danger); margin-right:0;" onclick="deleteMyGroup('${d.id}')">삭제</button>
+      </div>`;
     });
+    
     box.innerHTML = html || '<div class="empty">아직 참여한 그룹이 없어요.</div>';
-  } catch (e) { console.error(e); }
+  } catch (e) { 
+    console.error(e); 
+  }
 }
 
 window.jumpToGroup = async (groupId, groupName) => {
@@ -803,17 +808,23 @@ function loadParticipants() {
       if (prevParticipantCount > 0) prevParticipantCount = 0;
       return;
     }
-    snapshot.forEach((doc) => {
-      const d = doc.data();
+    snapshot.forEach((docSnap) => {
+      const d = docSnap.data();
       lastParticipants.push(d);
       const li = document.createElement("li");
       li.className = "member";
+      
+      // ★ 내가 등록한 주소 정보인지 확인하는 조건문입니다.
+      const isMe = d.user === currentUserNickname;
+      
       li.innerHTML = `
         <div class="avatar">${(d.user || "?").charAt(0)}</div>
-        <div>
+        <div style="flex:1;">
           <div><strong>${escapeHtml(d.user)}</strong></div>
           <div class="meta">${escapeHtml(d.address)}${d.categories && d.categories.length ? " " + d.categories.map(escapeHtml).join(", ") : ""}</div>
-        </div>`;
+        </div>
+        ${isMe ? `<button class="ghost" style="width:auto; padding:4px 8px; font-size:12px; color:var(--danger); text-decoration:none; border:1px solid var(--danger); border-radius:8px;" onclick="deleteMyAddress('${docSnap.id}')">삭제</button>` : ""}
+      `;
       list.appendChild(li);
     });
     if (prevParticipantCount > 0 && lastParticipants.length > prevParticipantCount) {
@@ -1381,7 +1392,7 @@ window.deleteMyAddress = async (docId) => {
     alert("주소가 삭제되었습니다.");
   } catch (e) {
     console.error(e);
-    alert("삭제 실패: " + e.message);
+    alert("삭제 실패 : " + e.message);
   }
 };
 
@@ -1395,6 +1406,46 @@ window.deleteMyGroup = async (docId) => {
     alert("삭제 실패: " + e.message);
   }
 };
+window.resetGroup = async () => {
+  if (!currentGroupId) return;
+  if (!confirm("다음 모임을 위해 확정된 날짜, 장소, 투표 내역, 달력 선택을 모두 초기화하시겠어요?\n(참여 멤버와 채팅 내역은 그대로 유지됩니다!)")) return;
+
+  try {
+    // 1. 그룹의 확정 날짜/장소 초기화
+    await updateDoc(doc(db, "groups", currentGroupId), {
+      confirmedDate: null,
+      confirmedPlace: null
+    });
+
+    // 2. 멤버들이 선택했던 가능 날짜(Availability) 모두 삭제
+    const availQ = query(collection(db, "Availability"), where("groupId", "==", currentGroupId));
+    const availSnap = await getDocs(availQ);
+    availSnap.forEach(async (d) => {
+      await deleteDoc(doc(db, "Availability", d.id));
+    });
+
+    // 3. 멤버들이 투표했던 장소 내역(Votes) 모두 삭제
+    const votesQ = query(collection(db, "Votes"), where("groupId", "==", currentGroupId));
+    const votesSnap = await getDocs(votesQ);
+    votesSnap.forEach(async (d) => {
+      await deleteDoc(doc(db, "Votes", d.id));
+    });
+
+    // 4. 화면 데이터 즉시 비우기
+    selectedDates = new Set();
+    renderCalendar();
+    document.getElementById("dateResultArea").innerHTML = "";
+    document.getElementById("resultArea").innerHTML = "";
+    document.getElementById("compareArea").innerHTML = "";
+
+    alert("초기화 완료! 다음 모임을 새롭게 계획해보세요 🎉");
+
+  } catch (e) {
+    console.error(e);
+    alert("초기화 실패: " + e.message);
+  }
+};
+
 </script>
 <script>
 // 팀원이 열어둔 ngrok 백엔드 서버 주소
