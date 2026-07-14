@@ -29,17 +29,30 @@
 body {
   margin: 0;
   font-family: "Pretendard", "Apple SD Gothic Neo", "Segoe UI", sans-serif;
-  background: var(--bg-navy);
   color: var(--ink);
   min-height: 100vh;
   display: flex;
   justify-content: center;
   padding: 32px 16px;
+
+  /* ===== [배경 디자인 변경] 7-14-3에서 적용 =====
+     은은한 여행/풍경 느낌의 배경 이미지를 깔고, 그 위에 앱의 파스텔 톤과
+     어울리는 반투명 그라데이션 오버레이를 얹어 채도를 낮춤으로써
+     본문 카드/텍스트의 가독성을 해치지 않도록 처리했습니다. */
+  background-image:
+    linear-gradient(180deg, rgba(250, 232, 251, 0.88) 0%, rgba(242, 220, 243, 0.82) 45%, rgba(227, 213, 235, 0.9) 100%),
+    url("https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1600&q=60");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed; /* 스크롤해도 배경이 함께 흐르지 않도록 고정 */
 }
 #phone {
   width: 100%;
   max-width: 440px;
-  background: var(--bg-navy-deep);
+  background: rgba(242, 220, 243, 0.55); /* 배경 이미지가 은은하게 비치도록 반투명 처리 */
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
   border-radius: 34px;
   padding: 12px;
   box-shadow: 0 30px 70px rgba(0,0,0,.15), inset 0 0 0 1px rgba(255,255,255,.5);
@@ -423,6 +436,49 @@ button.vote-btn.voted { background: var(--accent-soft); border-color: var(--acce
 }
 .agenda-item .actions .edit-btn { background: var(--accent-soft); color: var(--ink); }
 .agenda-item .actions .del-btn { background: transparent; color: var(--danger); border: 1px solid var(--danger); }
+
+/* ===== [신규] BGM(배경음악) 컨트롤러 CSS =====
+   챗봇 플로팅 아이콘 '바로 왼쪽'에 배치됩니다. */
+#bgmController {
+  position: fixed;
+  bottom: 24px;
+  right: 92px; /* 챗봇 아이콘(56px) + 여백만큼 왼쪽으로 이동 */
+  z-index: 2147483000;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #ffffff;
+  border-radius: 999px;
+  padding: 8px 10px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.18);
+  border: 1px solid var(--line);
+}
+#bgmToggleBtn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--ink);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+  cursor: pointer;
+  flex-shrink: 0;
+  padding: 0;
+  box-shadow: none;
+}
+#bgmToggleBtn.playing { background: linear-gradient(135deg, var(--accent) 0%, var(--accent-deep) 100%); color: var(--ink); }
+#bgmVolume {
+  width: 70px;
+  accent-color: var(--accent-deep);
+  cursor: pointer;
+}
+/* 모바일 좁은 화면에서는 볼륨 슬라이더를 살짝 접어 공간을 아낌 */
+@media (max-width: 380px) {
+  #bgmVolume { width: 46px; }
+  #bgmController { right: 82px; padding: 6px 8px; gap: 6px; }
+}
 </style>
 </head>
 <body>
@@ -610,6 +666,16 @@ button.vote-btn.voted { background: var(--accent-soft); border-color: var(--acce
     <button class="primary" onclick="saveEvent()">일정 저장하기</button>
   </div>
 </div>
+<!-- ===== [신규] BGM 배경음악 컨트롤러 (챗봇 아이콘 바로 왼쪽) ===== -->
+<div id="bgmController">
+  <button id="bgmToggleBtn" onclick="toggleBgm()" aria-label="배경음악 재생/정지">🎵</button>
+  <input type="range" id="bgmVolume" min="0" max="100" value="35" oninput="setBgmVolume(this.value)" aria-label="음량 조절">
+  <!-- 저작권 없는 잔잔한 로파이/카페풍 샘플 오디오 -->
+  <audio id="bgmAudio" loop preload="none">
+    <source src="https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3" type="audio/mpeg">
+  </audio>
+</div>
+
 <div id="chatbot-launcher" onclick="toggleChatbot()">💬</div>
 <div id="chatbot-window">
   <div id="chatbot-header">
@@ -662,6 +728,31 @@ button.vote-btn.voted { background: var(--accent-soft); border-color: var(--acce
     let myEvents = {}; // { "2026-07-14": [{id, title, time, memo}, ...] }
     let activeModalDateKey = null;
     let editingEventId = null;
+    
+  function toggleBgm() {
+    const bgmAudio = document.getElementById('bgmAudio');
+    const bgmToggleBtn = document.getElementById('bgmToggleBtn');
+    if (bgmAudio.paused) {
+        bgmAudio.play()
+            .then(() => { bgmToggleBtn.innerText = "⏸️"; })
+            .catch(err => console.log("화면 클릭 후 재생해 주세요.", err));
+    } else {
+        bgmAudio.pause();
+        bgmToggleBtn.innerText = "🎵";
+    }
+}
+
+// HTML에 적힌 setBgVolume과 완벽하게 이름을 맞춘 함수입니다!
+function setBgVolume(value) {
+    const bgmAudio = document.getElementById('bgmAudio');
+    bgmAudio.volume = Number(value) / 100;
+}
+document.getElementById('bgmVolume').addEventListener('input', function(e) {
+    document.getElementById('bgmAudio').volume = Number(e.target.value) / 100;
+});
+
+window.toggleBgm = toggleBgm;
+window.setBgVolume = setBgVolume;
 
     const urlParams = new URLSearchParams(window.location.search);
     const pendingInviteGroupId = urlParams.get("group");
@@ -1166,78 +1257,154 @@ function placeCardHtml(place) {
 }
 
 window.recommendLocation = async () => {
-  if (lastParticipants.length < 2) return alert("멤버가 2명 이상이어야 추천할 수 있어요.");
-  const mid = computeMidpoint(lastParticipants);
-  if (!mid) return alert("먼저 멤버들의 주소가 등록되어야 해요.");
-  const resultArea = document.getElementById("resultArea");
-  resultArea.innerHTML = '<div class="empty">추천 장소를 찾고 있어요...</div>';
-  lastPlaces = [];
-  clearRouteLines();
-  document.getElementById("routeArea").innerHTML = "";
-  
-  let categories = [...new Set(lastParticipants.flatMap(p => p.categories || []))];
-  if (categories.length === 0) categories = ["맛집", "카페"];
-  const pricePref = document.getElementById("priceGroupPref").value;
-  let html = '<div class="lead">중간 지점 근처, 멤버들이 원한 카테고리 기준 추천이에요.</div>';
-  
-  for (const cat of categories) {
-    const keyword = pricePref ? `${cat} ${pricePref}` : cat;
-    const places = await searchPlaces(keyword, mid.lat, mid.lng);
-    html += `<h3 style="margin-top:12px;">${escapeHtml(cat)}</h3>`;
-    if (places.length === 0) {
-      html += `<div class="empty">근처에서 "${escapeHtml(cat)}" 관련 장소를 찾지 못했어요.</div>`;
-    } else {
-      html += placeCardHtml(places[0]);
+    const category = document.getElementById("userCategories").value || "카페";
+    const pricePref = document.getElementById("priceGroupPref").value;
+    const resultArea = document.getElementById("resultArea");
+
+    // 1. 카카오 API로 후보지 검색 (기존 로직 유지)
+    const midPoint = calculateMidPoint(lastParticipants);
+    const places = await searchKakaoPlaces(midPoint, category);
+
+    if (!places || places.length === 0) {
+        resultArea.innerHTML = "해당 지역에서 찾을 수 없어요.";
+        return;
     }
-  }
-  resultArea.innerHTML = html;
+
+    // 2. 우리 서버로 데이터 전송
+    resultArea.innerHTML = "AI가 분석 중입니다...";
+    
+    const response = await fetch('/api/recommend', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ places, preference: pricePref, category })
+    });
+
+    const data = await response.json();
+    
+    // 3. 결과 렌더링
+    if (data.recommendations) {
+        resultArea.innerHTML = data.recommendations.map(item => `
+            <div class="place-card">
+                <div class="name">${item.name}</div>
+                <div class="addr">${item.address}</div>
+                <p style="font-size:12px; color:#555;">💡 ${item.reason}</p>
+                <a href="${item.link}" target="_blank">카카오맵에서 보기 →</a>
+            </div>
+        `).join('');
+    }
 };
+
+// 중간 지점 계산 함수 (모든 멤버 좌표의 평균값)
+function calculateMidPoint(participants) {
+    if (!participants || participants.length === 0) return { lat: 37.5665, lng: 126.9780 }; // 기본값: 서울시청
+
+    let latSum = 0;
+    let lngSum = 0;
+    let count = 0;
+
+    participants.forEach(p => {
+        // p.lat, p.lng가 저장되어 있다고 가정
+        if (p.lat && p.lng) {
+            latSum += parseFloat(p.lat);
+            lngSum += parseFloat(p.lng);
+            count++;
+        }
+    });
+
+    return {
+        lat: latSum / count,
+        lng: lngSum / count
+    };
+}
+
+// 카카오 지도 API를 사용한 장소 검색 함수
+async function searchKakaoPlaces(midPoint, category) {
+    return new Promise((resolve, reject) => {
+        const ps = new kakao.maps.services.Places();
+        
+        // 검색 위치 설정
+        const loc = new kakao.maps.LatLng(midPoint.lat, midPoint.lng);
+        
+        // 키워드로 장소 검색
+        ps.keywordSearch(category, (data, status) => {
+            if (status === kakao.maps.services.Status.OK) {
+                // 검색 결과가 있으면 배열 반환
+                resolve(data);
+            } else if (status === kakao.maps.services.Status.ZERO_RESULT) {
+                resolve([]); // 결과 없음
+            } else {
+                reject(new Error("카카오 API 검색 실패"));
+            }
+        }, {
+            location: loc,
+            radius: 2000, // 중간지점 반경 2km 이내 검색
+            sort: kakao.maps.services.SortBy.DISTANCE // 가까운 순으로 정렬
+        });
+    });
+}
 
 window.compareCategories = async () => {
   if (lastParticipants.length < 2) return alert("멤버가 2명 이상이어야 비교할 수 있어요.");
   const mid = computeMidpoint(lastParticipants);
   if (!mid) return alert("먼저 멤버들의 주소가 등록되어야 해요.");
+  
   const catA = document.getElementById("compare").value.trim();
   const catB = document.getElementById("compareB").value.trim();
   if (!catA || !catB) return alert("비교할 카테고리 두 개를 모두 입력해주세요.");
+  
   const compareArea = document.getElementById("compareArea");
-  compareArea.innerHTML = '<div class="empty">비교 중이에요...</div>';
+  compareArea.innerHTML = '<div class="empty">Gemini가 두 카테고리의 최적 후보를 비교 분석하고 있어요... 🤖⏳</div>';
+  
   lastPlaces = [];
   clearRouteLines();
   document.getElementById("routeArea").innerHTML = "";
-  const pricePref = document.getElementById("priceComparePref").value;
   
-  const [placesA, placesB] = await Promise.all([
-    searchPlaces(pricePref ? `${catA} ${pricePref}` : catA, mid.lat, mid.lng),
-    searchPlaces(pricePref ? `${catB} ${pricePref}` : catB, mid.lat, mid.lng)
-  ]);
+  const pricePref = document.getElementById("priceComparePref").value || "전체 가격대";
+  const apiKey = localStorage.getItem("moyeoba_gemini_api_key");
   
-  const colHtml = (label, places) => {
-    let inner = `<h3>${escapeHtml(label)}</h3>`;
-    if (places.length === 0) {
-      inner += '<div class="empty">결과가 없어요.</div>';
-    } else {
-      inner += places.slice(0, 3).map(placeCardHtml).join("");
-    }
-    return `<div class="col">${inner}</div>`;
-  };
-  
-  compareArea.innerHTML = `
-    <div class="lead">카카오맵 검색 기준 상위 결과예요. 실제 평점 리뷰는 링크에서 확인해보세요.</div>
-    <div class="compare-cols">
-      ${colHtml(catA, placesA)}
-      ${colHtml(catB, placesB)}
-    </div>`;
-};
+  if (!apiKey) {
+    compareArea.innerHTML = '<div class="empty" style="color:var(--danger);">우측 하단 AI 챗봇의 ⚙️ 설정에서 Gemini API 키를 먼저 등록해주세요!</div>';
+    return;
+  }
 
-let calendarViewDate = new Date();
-let selectedDates = new Set();
-function pad2(n) { return String(n).padStart(2, "0"); }
-function toDateKey(y, m, d) { return `${y}-${pad2(m + 1)}-${pad2(d)}`; }
+  const promptText = `위도 ${mid.lat}, 경도 ${mid.lng} 근처의 실제 장소를 기반으로 ${catA}와 ${catB}를 비교해주세요. 가격대: ${pricePref}. JSON 배열 형식으로 답변하세요: {"categoryA_places": [{"place_name": "", "category_name": "${catA}", "road_address_name": "", "distance_text": "", "place_url": "", "y": "", "x": ""}], "categoryB_places": [...], "analysis": "요약"}`;
 
-window.changeCalendarMonth = (delta) => {
-  calendarViewDate.setMonth(calendarViewDate.getMonth() + delta);
-  renderCalendar();
+  try {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ contents: [{ parts: [{ text: promptText }] }] })
+    });
+
+    if (!response.ok) throw new Error("Gemini API 응답 오류");
+    const data = await response.json();
+    let rawText = data.candidates[0].content.parts[0].text.replace(/```json|```/g, "").trim();
+    const aiJson = JSON.parse(rawText);
+
+    const renderAiCards = (places) => {
+      if (!places || places.length === 0) return '<div class="empty">결과가 없습니다.</div>';
+      return places.map(p => {
+        const mockPlace = { place_name: p.place_name, road_address_name: p.road_address_name, category_name: p.category_name, place_url: p.place_url || "https://map.kakao.com", y: p.y, x: p.x, distance: parseFloat(p.distance_text) || 500 };
+        const idx = registerPlace(mockPlace);
+        return `<div class="place-card">
+          <div class="name">${escapeHtml(p.place_name)}</div>
+          <div class="addr">${escapeHtml(p.road_address_name)}</div>
+          <a href="${mockPlace.place_url}" target="_blank">리뷰 보기</a>
+          <button class="chip" type="button" onclick="showRouteToPlace(${idx})">동선</button>
+        </div>`;
+      }).join("");
+    };
+
+    compareArea.innerHTML = `
+      <div class="compare-cols" style="display:flex; gap:12px;">
+        <div class="col" style="flex:1;"><h3>📂 ${escapeHtml(catA)}</h3>${renderAiCards(aiJson.categoryA_places)}</div>
+        <div class="col" style="flex:1;"><h3>📂 ${escapeHtml(catB)}</h3>${renderAiCards(aiJson.categoryB_places)}</div>
+      </div>
+      <p style="font-size:13px; color:var(--ink);">${escapeHtml(aiJson.analysis)}</p>
+    `;
+  } catch (e) {
+    compareArea.innerHTML = `<div class="empty">⚠️ AI 연결 실패: ${e.message}</div>`;
+  }
 };
 
 function renderCalendar() {
