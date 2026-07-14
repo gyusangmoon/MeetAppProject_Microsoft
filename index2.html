@@ -10,7 +10,6 @@
 
 <style>
 :root {
-  /* 김경은.pdf의 파스텔 톤 테마 적용 */
   --bg-navy: #fae8fb;
   --bg-navy-deep: #f2dcf3;
   --card: #ffffff;
@@ -73,7 +72,7 @@ p { color: var(--ink-soft); font-size: 13px; line-height: 1.55; margin: 4px 0 14
   align-items: center;
   gap: 4px;
   background: var(--accent-soft);
-  color: var(--ink); /* 글씨 진하게 수정 */
+  color: var(--ink);
   font-size: 11px;
   font-weight: 800;
   padding: 5px 12px;
@@ -82,7 +81,7 @@ p { color: var(--ink-soft); font-size: 13px; line-height: 1.55; margin: 4px 0 14
   letter-spacing: .3px;
 }
 .badge.alt { background: #ece9fb; color: var(--accent2); }
-input[type=text], input[type=email], input[type=password] {
+input[type=text], input[type=email], input[type=password], input[type=time] {
   width: 100%;
   border: 1.5px solid var(--line);
   background: #fff;
@@ -173,7 +172,6 @@ ul.plain { list-style: none; padding: 0; margin: 0; }
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-thumb { background: var(--line); border-radius: 10px; }
 
-/* 안예은.pdf의 신규 기능 CSS */
 #toastStack { position: absolute; top: 14px; left: 14px; right: 14px; z-index: 50; display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
 .toast {
   background: var(--ink); color: #fff; padding: 10px 14px; border-radius: 12px; font-size: 12.5px; font-weight: 700;
@@ -203,6 +201,7 @@ button.vote-btn.voted { background: var(--accent-soft); border-color: var(--acce
 .weather-box .desc { font-size: 12px; color: var(--ink-soft); }
 .my-group-item { display: flex; justify-content: space-between; align-items: center; background: var(--card-cream); border-radius: 14px; padding: 10px 12px; margin-bottom: 8px; }
 .my-group-item .name { font-weight: 800; font-size: 13px; color: var(--ink); }
+
 /* 챗봇 플로팅 버튼 및 채팅창 CSS 스타일 */
 #chatbot-launcher {
   position: fixed;
@@ -297,6 +296,133 @@ button.vote-btn.voted { background: var(--accent-soft); border-color: var(--acce
   font-size: 13px;
   cursor: pointer;
 }
+
+/* 개인 일정(캘린더) 관련 CSS */
+.day-cell {
+  position: relative;
+  margin: 0;
+  padding: 8px 0 10px;
+  border-radius: 10px;
+  font-size: 13px;
+}
+.day-cell .event-dot {
+  position: absolute;
+  bottom: 3px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #7c6df2;
+}
+.day-cell .add-event-btn {
+  position: absolute;
+  top: -6px;
+  right: -4px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--ink);
+  color: #fff;
+  font-size: 11px;
+  line-height: 16px;
+  text-align: center;
+  padding: 0;
+  font-weight: 800;
+  box-shadow: 0 2px 6px rgba(0,0,0,.25);
+  opacity: 0.85;
+}
+.day-cell .add-event-btn:active { transform: scale(.9); }
+
+#eventModalOverlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(20,15,30,.5);
+  z-index: 2000;
+  align-items: flex-end;
+  justify-content: center;
+}
+#eventModalOverlay.open { display: flex; }
+#eventModalBox {
+  background: #fff;
+  width: 100%;
+  max-width: 440px;
+  border-radius: 22px 22px 0 0;
+  padding: 20px 18px 24px;
+  box-shadow: 0 -14px 34px rgba(0,0,0,.2);
+  max-height: 80vh;
+  overflow-y: auto;
+}
+#eventModalBox .modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+#eventModalBox .modal-header .close-x {
+  cursor: pointer;
+  font-size: 18px;
+  color: var(--ink-soft);
+  font-weight: 800;
+  padding: 4px 8px;
+}
+.event-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--card-cream);
+  border-radius: 12px;
+  padding: 8px 10px;
+  margin-bottom: 8px;
+  border: 1px solid var(--line);
+}
+.event-item .info { flex: 1; min-width: 0; }
+.event-item .title { font-weight: 800; font-size: 13px; color: var(--ink); }
+.event-item .sub { font-size: 11.5px; color: var(--ink-soft); margin-top: 2px; }
+.event-item .del-btn {
+  width: auto;
+  padding: 4px 8px;
+  font-size: 11.5px;
+  color: var(--danger);
+  border: 1px solid var(--danger);
+  border-radius: 8px;
+  background: transparent;
+  box-shadow: none;
+}
+.agenda-item {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  background: var(--card-cream);
+  border-radius: 14px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  border: 1px solid var(--line);
+}
+.agenda-item .date-tag {
+  flex-shrink: 0;
+  background: var(--ink);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 4px 8px;
+  border-radius: 8px;
+  white-space: nowrap;
+}
+.agenda-item .info { flex: 1; min-width: 0; }
+.agenda-item .title { font-weight: 800; font-size: 13px; color: var(--ink); }
+.agenda-item .sub { font-size: 11.5px; color: var(--ink-soft); margin-top: 2px; }
+.agenda-item .actions { display: flex; gap: 6px; flex-shrink: 0; }
+.agenda-item .actions button {
+  width: auto;
+  padding: 4px 8px;
+  font-size: 11px;
+  border-radius: 8px;
+  box-shadow: none;
+}
+.agenda-item .actions .edit-btn { background: var(--accent-soft); color: var(--ink); }
+.agenda-item .actions .del-btn { background: transparent; color: var(--danger); border: 1px solid var(--danger); }
 </style>
 </head>
 <body>
@@ -390,7 +516,14 @@ button.vote-btn.voted { background: var(--accent-soft); border-color: var(--acce
           <button class="chip" type="button" onclick="changeCalendarMonth(1)">다음달 &gt;</button>
         </div>
         <div id="calendarGrid"></div>
-        <button class="primary" style="margin-top:10px;" onclick="saveMyAvailability()">선택한 날짜 저장하기</button>
+        <p style="margin: 10px 0 0;">달력 칸 오른쪽 위의 <strong>+</strong> 버튼을 누르면 그 날짜에 일정(제목/시간/메모)을 등록할 수 있어요. 등록한 일정은 <strong>그룹 멤버 모두</strong>에게 보여요. 점(●)이 표시된 날은 이미 등록된 일정이 있는 날이에요.</p>
+        <button class="primary" onclick="saveMyAvailability()">선택한 날짜 저장하기</button>
+      </div>
+
+      <div class="card">
+        <h3>모임 일정 목록</h3>
+        <p style="margin-bottom:8px;">그룹 멤버들이 이 캘린더에 등록한 일정이에요. 내 일정만 수정·삭제할 수 있어요.</p>
+        <div id="myEventsAgenda"><div class="empty">아직 등록된 일정이 없어요.</div></div>
       </div>
 
       <div class="card">
@@ -444,8 +577,8 @@ button.vote-btn.voted { background: var(--accent-soft); border-color: var(--acce
         <h3>장소 비교하기</h3>
         <p style="margin-bottom:8px;">두 가지 카테고리를 넣으면 중간 지점 근처에서 각각 후보를 찾아 나란히 비교해드려요.</p>
         <div class="row">
-          <input type="text" id="compare" placeholder="예: 치킨">
-          <input type="text" id="compareB" placeholder="예: 떡볶이">
+          <input type="text" id="compare" placeholder="예: 카페">
+          <input type="text" id="compareB" placeholder="예: 분식">
         </div>
         <label class="small">가격대 (선택)</label>
         <select id="priceComparePref" style="width: 100%; border:1.5px solid var(--line); border-radius: 13px;padding:12px 14px; font-size:14px;margin-bottom:10px;font-family: inherit; background:#fff;">
@@ -461,6 +594,22 @@ button.vote-btn.voted { background: var(--accent-soft); border-color: var(--acce
     </div>
   </div>
 </div></div>
+<div id="eventModalOverlay" onclick="if(event.target===this) closeEventModal()">
+  <div id="eventModalBox">
+    <div class="modal-header">
+      <h3 id="eventModalDateLabel" style="margin:0;">일정 추가</h3>
+      <span class="close-x" onclick="closeEventModal()">✕</span>
+    </div>
+    <div id="eventModalExisting"></div>
+    <label class="small">제목</label>
+    <input type="text" id="eventTitleInput" placeholder="예: 병원 예약">
+    <label class="small">시간 (선택, 달력처럼 눌러서 선택하세요)</label>
+    <input type="time" id="eventTimeInput">
+    <label class="small">메모 / 장소 (선택)</label>
+    <input type="text" id="eventMemoInput" placeholder="예: 강남역 3번 출구">
+    <button class="primary" onclick="saveEvent()">일정 저장하기</button>
+  </div>
+</div>
 <div id="chatbot-launcher" onclick="toggleChatbot()">💬</div>
 <div id="chatbot-window">
   <div id="chatbot-header">
@@ -504,11 +653,15 @@ button.vote-btn.voted { background: var(--accent-soft); border-color: var(--acce
     let groupUnsub = null;
     let messagesUnsub = null;
     let votesUnsub = null;
+    let eventsUnsub = null;
     let voteCounts = {};
     let myVotes = new Set();
     let lastMessageCount = 0;
     let currentGroupData = { confirmedDate: null, confirmedPlace: null };
     let prevParticipantCount = 0;
+    let myEvents = {}; // { "2026-07-14": [{id, title, time, memo}, ...] }
+    let activeModalDateKey = null;
+    let editingEventId = null;
 
     const urlParams = new URLSearchParams(window.location.search);
     const pendingInviteGroupId = urlParams.get("group");
@@ -566,8 +719,7 @@ async function enterService() {
   document.getElementById("authArea").style.display = "none";
   document.getElementById("mainServiceArea").style.display = "block";
   document.getElementById("whoAmI").innerText = currentUserNickname ? `${currentUserNickname}님` : "";
-  
-  // 김경은.pdf 화면 전환 적용
+
   document.getElementById("groupSelectionArea").style.display = "block";
   document.getElementById("actionArea").style.display = "none";
 
@@ -627,7 +779,6 @@ async function enterGroup(groupId, name, fromInvite) {
   currentGroupName = name;
   document.getElementById("currentGroupTitle").innerText = `참여 중: ${currentGroupName}`;
   
-  // 김경은.pdf 화면 전환 적용
   document.getElementById("groupSelectionArea").style.display = "none";
   document.getElementById("actionArea").style.display = "block";
   
@@ -642,6 +793,8 @@ async function enterGroup(groupId, name, fromInvite) {
   prevParticipantCount = 0;
   voteCounts = {};
   myVotes = new Set();
+  myEvents = {};
+  document.getElementById("myEventsAgenda").innerHTML = '<div class="empty">아직 등록된 일정이 없어요.</div>';
   
   const banner = document.getElementById("inviteBannerCard");
   if (fromInvite) {
@@ -658,13 +811,13 @@ async function enterGroup(groupId, name, fromInvite) {
   subscribeToGroupDoc(groupId);
   subscribeToMessages(groupId);
   subscribeToVotes(groupId);
+  subscribeToEvents(groupId);
   
   if (fromInvite) {
     document.getElementById("actionArea").scrollIntoView({ behavior: "smooth", block: "start" });
   }
 }
 
-// 김경은.pdf 홈 화면 돌아가기
 window.goHome = () => {
   currentGroupId = "";
   currentGroupName = "";
@@ -769,7 +922,6 @@ window.saveMyAddress = async () => {
     const { lat, lng } = await geocodeAddress(address);
     const categories = categoriesRaw ? categoriesRaw.split(",").map(s => s.trim()).filter(Boolean) : [];
     
-    // 김경은.pdf 주소 중복 저장 방지 로직 적용
     const q = query(collection(db, "Participant"), where("groupId", "==", currentGroupId), where("user", "==", currentUserNickname));
     const snap = await getDocs(q);
     if (snap.empty) {
@@ -1107,7 +1259,13 @@ function renderCalendar() {
   for (let d = 1; d <= daysInMonth; d++) {
     const key = toDateKey(y, m, d);
     const isSelected = selectedDates.has(key);
-    html += `<button type="button" class="chip" style="margin:0;padding: 8px 0;border-radius:10px;${isSelected ? "background: var(--accent); color: var(--ink); border-color:var(--accent);" : ""}" onclick="toggleDate('${key}')">${d}</button>`;
+    const hasEvents = !!(myEvents[key] && myEvents[key].length);
+    html += `
+      <div class="day-cell">
+        <button type="button" class="chip" style="margin:0;width:100%;padding: 8px 0;border-radius:10px;${isSelected ? "background: var(--accent); color: var(--ink); border-color:var(--accent);" : ""}" onclick="toggleDate('${key}')">${d}</button>
+        <button type="button" class="add-event-btn" onclick="event.stopPropagation(); openEventModal('${key}')">+</button>
+        ${hasEvents ? '<span class="event-dot"></span>' : ''}
+      </div>`;
   }
   html += '</div>';
   grid.innerHTML = html;
@@ -1150,6 +1308,149 @@ async function loadMyAvailability() {
     }
     renderCalendar();
   } catch (e) { console.error(e); }
+}
+
+function subscribeToEvents(groupId) {
+  if (eventsUnsub) eventsUnsub();
+  const q = query(collection(db, "PersonalEvents"), where("groupId", "==", groupId));
+  eventsUnsub = onSnapshot(q, (snap) => {
+    const map = {};
+    snap.forEach(d => {
+      const data = d.data();
+      const item = { id: d.id, title: data.title, time: data.time || "", memo: data.memo || "", dateKey: data.dateKey, user: data.user || "" };
+      if (!map[data.dateKey]) map[data.dateKey] = [];
+      map[data.dateKey].push(item);
+    });
+    Object.values(map).forEach(list => list.sort((a, b) => (a.time || "").localeCompare(b.time || "")));
+    myEvents = map;
+    renderCalendar();
+    renderAgenda();
+    if (activeModalDateKey) renderEventModalExisting(activeModalDateKey);
+  });
+}
+
+window.openEventModal = (dateKey) => {
+  activeModalDateKey = dateKey;
+  editingEventId = null;
+  document.getElementById("eventModalDateLabel").innerText = `${formatDateKey(dateKey)} 일정`;
+  document.getElementById("eventTitleInput").value = "";
+  document.getElementById("eventTimeInput").value = "";
+  document.getElementById("eventMemoInput").value = "";
+  renderEventModalExisting(dateKey);
+  document.getElementById("eventModalOverlay").classList.add("open");
+};
+
+window.closeEventModal = () => {
+  document.getElementById("eventModalOverlay").classList.remove("open");
+  activeModalDateKey = null;
+  editingEventId = null;
+};
+
+function renderEventModalExisting(dateKey) {
+  const box = document.getElementById("eventModalExisting");
+  const list = myEvents[dateKey] || [];
+  if (list.length === 0) {
+    box.innerHTML = '<div class="empty">이 날짜에 등록된 일정이 없어요.</div>';
+    return;
+  }
+  box.innerHTML = list.map(ev => {
+    const isMe = ev.user === currentUserNickname;
+    return `
+    <div class="event-item">
+      <div class="info">
+        <div class="title">${escapeHtml(ev.title)}${ev.time ? " · " + escapeHtml(ev.time) : ""}</div>
+        <div class="sub">${escapeHtml(ev.user)}${isMe ? " (나)" : ""}${ev.memo ? " · " + escapeHtml(ev.memo) : ""}</div>
+      </div>
+      ${isMe ? `
+      <button type="button" class="chip" style="margin:0;" onclick="editEvent('${dateKey}', '${ev.id}')">수정</button>
+      <button type="button" class="del-btn" onclick="deleteEvent('${ev.id}')">삭제</button>` : ""}
+    </div>`;
+  }).join("");
+}
+
+window.editEvent = (dateKey, id) => {
+  const ev = (myEvents[dateKey] || []).find(e => e.id === id);
+  if (!ev) return;
+  editingEventId = id;
+  document.getElementById("eventTitleInput").value = ev.title;
+  document.getElementById("eventTimeInput").value = ev.time || "";
+  document.getElementById("eventMemoInput").value = ev.memo || "";
+};
+
+window.saveEvent = async () => {
+  if (!currentGroupId || !activeModalDateKey) return;
+  const title = document.getElementById("eventTitleInput").value.trim();
+  const time = document.getElementById("eventTimeInput").value.trim();
+  const memo = document.getElementById("eventMemoInput").value.trim();
+  if (!title) return alert("일정 제목을 입력해주세요!");
+  try {
+    if (editingEventId) {
+      await updateDoc(doc(db, "PersonalEvents", editingEventId), { title, time, memo });
+    } else {
+      await addDoc(collection(db, "PersonalEvents"), {
+        groupId: currentGroupId, user: currentUserNickname, dateKey: activeModalDateKey,
+        title, time, memo, createdAt: Date.now()
+      });
+    }
+    editingEventId = null;
+    document.getElementById("eventTitleInput").value = "";
+    document.getElementById("eventTimeInput").value = "";
+    document.getElementById("eventMemoInput").value = "";
+  } catch (e) {
+    console.error(e);
+    alert("일정 저장에 실패했어요: " + e.message);
+  }
+};
+
+window.deleteEvent = async (id) => {
+  if (!confirm("이 일정을 삭제하시겠어요?")) return;
+  try {
+    await deleteDoc(doc(db, "PersonalEvents", id));
+    if (editingEventId === id) {
+      editingEventId = null;
+      document.getElementById("eventTitleInput").value = "";
+      document.getElementById("eventTimeInput").value = "";
+      document.getElementById("eventMemoInput").value = "";
+    }
+  } catch (e) {
+    console.error(e);
+    alert("일정 삭제에 실패했어요: " + e.message);
+  }
+};
+
+function renderAgenda() {
+  const box = document.getElementById("myEventsAgenda");
+  if (!box) return;
+  const dateKeys = Object.keys(myEvents).sort();
+  const rows = [];
+  dateKeys.forEach(dateKey => {
+    (myEvents[dateKey] || []).forEach(ev => rows.push({ dateKey, ...ev }));
+  });
+  if (rows.length === 0) {
+    box.innerHTML = '<div class="empty">아직 등록된 일정이 없어요.</div>';
+    return;
+  }
+  box.innerHTML = rows.map(ev => {
+    const isMe = ev.user === currentUserNickname;
+    return `
+    <div class="agenda-item">
+      <span class="date-tag">${escapeHtml(formatDateKeyShort(ev.dateKey))}</span>
+      <div class="info">
+        <div class="title">${escapeHtml(ev.title)}${ev.time ? " · " + escapeHtml(ev.time) : ""}</div>
+        <div class="sub">${escapeHtml(ev.user)}${isMe ? " (나)" : ""}${ev.memo ? " · " + escapeHtml(ev.memo) : ""}</div>
+      </div>
+      ${isMe ? `
+      <div class="actions">
+        <button type="button" class="edit-btn" onclick="openEventModal('${ev.dateKey}'); setTimeout(() => editEvent('${ev.dateKey}', '${ev.id}'), 0);">수정</button>
+        <button type="button" class="del-btn" onclick="deleteEvent('${ev.id}')">삭제</button>
+      </div>` : ""}
+    </div>`;
+  }).join("");
+}
+
+function formatDateKeyShort(key) {
+  const [, m, d] = key.split("-").map(Number);
+  return `${m}/${d}`;
 }
 
 window.recommendDate = async () => {
@@ -1359,7 +1660,10 @@ async function fetchWeatherHtml(lat, lng, dateKey) {
     return `
       <div class="weather-box">
         <div class="temp">${Math.round(max)}° / ${Math.round(min)}°</div>
-        <div class="desc">강수확률 ${rain}% ${rain >= 50 ? "☔ 우산을 챙기세요!" : ""}</div>
+        <div class="desc">강수확률 ${rain}% ${rain >= 60 ? "☔ 우산을 챙기세요!" : ""}
+          ${max >= 30 ? "🥵 더워요! 손선풍기를 챙기세요!" : ""}
+          ${min <= 7 ? "🥶 추워요! 옷을 따뜻하게 입으세요!" : ""}
+          </div>
       </div>`;
   } catch (e) {
     console.error(e);
@@ -1448,7 +1752,6 @@ window.resetGroup = async () => {
 
 </script>
 <script>
-// 팀원이 열어둔 ngrok 백엔드 서버 주소
 const NGROK_URL = 'https://barmaid-unexpired-spotty.ngrok-free.dev';
 
 // 챗봇 토글 함수
@@ -1499,7 +1802,7 @@ async function sendBotMessage() {
     botBubble.innerText = data.reply;
     
   } catch (error) {
-    botBubble.innerText = '⚠️ 서버와 연결할 수 없습니다. 팀원 분의 백엔드(ngrok)가 켜져 있는지 확인해 주세요.';
+    botBubble.innerText = '⚠️ 서버와 연결할 수 없습니다. 백엔드(ngrok)가 켜져 있는지 확인해 주세요.';
   }
   msgContainer.scrollTop = msgContainer.scrollHeight;
 }
