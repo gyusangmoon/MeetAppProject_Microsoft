@@ -715,6 +715,8 @@ button.vote-btn.voted { background: var(--accent-soft); border-color: var(--acce
     let currentGroupName = "";
     let currentGroupId = "";
     let lastParticipants = [];
+    let finalTargetLat = null;
+    let finalTargetLng = null;
     
     let groupUnsub = null;
     let messagesUnsub = null;
@@ -1334,6 +1336,10 @@ window.recommendLocation = async () => {
     regionName = targetCity.name;
   }
 
+  // 💡 장소 비교 기능이 이 좌표를 가져다 쓸 수 있도록 전역 변수에 박제합니다!
+  finalTargetLat = targetLat;
+  finalTargetLng = targetLng;
+
   const resultArea = document.getElementById("resultArea");
   resultArea.innerHTML = '<div class="empty">Gemini가 최적의 장소를 추천하고 있어요... 🤖⏳</div>';
   lastPlaces = [];
@@ -1347,11 +1353,17 @@ window.recommendLocation = async () => {
   let html = `<div class="lead">모임 지역 <strong>(${escapeHtml(regionName)})</strong> 기준 추천 결과입니다.</div>`;
 
   for (const cat of categories) {
-    // 3. 검색어에 지역명을 붙여서 엉뚱한 곳이 나오지 않게 확실히 제한
     const searchKeyword = `${regionName} ${cat}`;
-    const finalKeyword = pricePref ? `${searchKeyword} ${pricePref}` : searchKeyword;
+    // 💡 "가성비"라는 값 대신 카카오 API가 더 풍부하게 찾을 수 있도록 "가성비 맛집" 등의 패턴으로 보정
+    let finalKeyword = searchKeyword;
+    if (pricePref) {
+      if (pricePref.includes("가성비")) {
+        finalKeyword = `${searchKeyword} 가성비`; // 또는 자연스러운 키워드로 조립
+      } else {
+        finalKeyword = `${searchKeyword} ${pricePref}`;
+      }
+    }
     
-    // 4. 결정된 target 좌표로 카카오 검색 실행
     const places = await searchPlaces(finalKeyword, targetLat, targetLng);
     html += `<h3 style="margin-top:12px;">${escapeHtml(cat)}</h3>`;
     
@@ -1368,21 +1380,53 @@ window.compareCategories = async () => {
   if (lastParticipants.length < 2) return alert("멤버가 2명 이상이어야 비교할 수 있어요.");
   const mid = computeMidpoint(lastParticipants);
   if (!mid) return alert("먼저 멤버들의 주소가 등록되어야 해요.");
+  
   const catA = document.getElementById("compare").value.trim();
   const catB = document.getElementById("compareB").value.trim();
   if (!catA || !catB) return alert("비교할 카테고리 두 개를 모두 입력해주세요.");
+  
   const compareArea = document.getElementById("compareArea");
-  compareArea.innerHTML = '<div class="empty">비교 중이에요...</div>';
+  compareArea.innerHTML = '<div class="empty">Gemini가 두 카테고리의 최적 후보를 비교하고 있어요... 🤖⏳</div>';
   lastPlaces = [];
   clearRouteLines();
   document.getElementById("routeArea").innerHTML = "";
+  
+  // 💡 1. 멤버들이 중간 지점으로부터 얼마나 흩어져 있는지 '최대 거리' 계산
+  let maxDist = 0;
+  lastParticipants.forEach(p => {
+    const dist = haversineKm(mid.lat, mid.lng, p.lat, p.lng);
+    if (dist > maxDist) maxDist = dist;
+  });
+
+  let targetLat, targetLng, regionName;
+
+  // 💡 2. 동네 모임(40km 이내)이면 원래 중간 지점 유지 / 전국 모임이면 대도시 자석 보정
+  if (maxDist < 40) {
+    targetLat = mid.lat;
+    targetLng = mid.lng;
+    regionName = await getExactRegionName(targetLat, targetLng);
+  } else {
+    const targetCity = getNearestMajorCity(mid.lat, mid.lng);
+    targetLat = targetCity.lat;
+    targetLng = targetCity.lng;
+    regionName = targetCity.name;
+  }
+
   const pricePref = document.getElementById("priceComparePref").value;
-  
+
+  // 💡 3. 검색어 앞에 결정된 지역명(regionName)을 강제로 결합해서 전국으로 튀는 현상 방지!
+  const searchKeywordA = `${regionName} ${catA}`;
+  const searchKeywordB = `${regionName} ${catB}`;
+
+  const finalKeywordA = pricePref ? `${searchKeywordA} ${pricePref}` : searchKeywordA;
+  const finalKeywordB = pricePref ? `${searchKeywordB} ${pricePref}` : searchKeywordB;
+
+  // 💡 4. 보정된 대도시 좌표 기준으로 각각 검색 실행
   const [placesA, placesB] = await Promise.all([
-    searchPlaces(pricePref ? `${catA} ${pricePref}` : catA, mid.lat, mid.lng),
-    searchPlaces(pricePref ? `${catB} ${pricePref}` : catB, mid.lat, mid.lng)
+    searchPlaces(finalKeywordA, targetLat, targetLng),
+    searchPlaces(finalKeywordB, targetLat, targetLng)
   ]);
-  
+
   const colHtml = (label, places) => {
     let inner = `<h3>${escapeHtml(label)}</h3>`;
     if (places.length === 0) {
@@ -1392,13 +1436,14 @@ window.compareCategories = async () => {
     }
     return `<div class="col">${inner}</div>`;
   };
-  
+
   compareArea.innerHTML = `
-    <div class="lead">카카오맵 검색 기준 상위 결과예요. 실제 평점 리뷰는 링크에서 확인해보세요.</div>
+    <div class="lead">모임 지역 <strong>(${escapeHtml(regionName)})</strong> 기준 카카오맵 검색 결과입니다.</div>
     <div class="compare-cols">
       ${colHtml(catA, placesA)}
       ${colHtml(catB, placesB)}
-    </div>`;
+    </div>
+  `;
 };
 
 let calendarViewDate = new Date();
