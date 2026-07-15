@@ -1124,6 +1124,19 @@ function getNearestMajorCity(lat, lng) {
   return closestCity;
 }
 
+// 계산된 중간 지점과 가까운 1순위, 2순위 대도시를 모두 찾아주는 함수
+function getNearestMajorCities(lat, lng) {
+  // 거리를 기준으로 모든 대도시를 오름차순(가까운 순)으로 정렬합니다.
+  const sortedCities = [...MAJOR_CITIES].sort((a, b) => {
+    const distA = haversineKm(lat, lng, a.lat, a.lng);
+    const distB = haversineKm(lat, lng, b.lat, b.lng);
+    return distA - distB;
+  });
+  
+  // 정렬된 리스트에서 1등과 2등만 쏙 뽑아서 배열로 반환!
+  return [sortedCities[0], sortedCities[1]];
+}
+
 // 2. 동네 모임일 때 진짜 동네 한글 이름을 가져오는 함수
 function getExactRegionName(lat, lng) {
   return new Promise((resolve) => {
@@ -1315,66 +1328,114 @@ window.recommendLocation = async () => {
   let mid = computeMidpoint(lastParticipants);
   if (!mid) return alert("먼저 멤버들의 주소가 등록되어야 해요.");
 
- // 1. 멤버들이 중간 지점으로부터 얼마나 흩어져 있는지 '최대 거리' 계산
   let maxDist = 0;
   lastParticipants.forEach(p => {
     const dist = haversineKm(mid.lat, mid.lng, p.lat, p.lng);
     if (dist > maxDist) maxDist = dist;
   });
 
-  let targetLat, targetLng, regionName;
-
-  // 2. 동네 모임(40km 이내)이면 원래 중간 지점 유지 / 전국 모임이면 대도시 자석 보정
+  let targetRegions = []; 
   if (maxDist < 40) {
-    targetLat = mid.lat;
-    targetLng = mid.lng;
-    regionName = await getExactRegionName(targetLat, targetLng);
+    const regionName = await getExactRegionName(mid.lat, mid.lng);
+    targetRegions.push({ name: regionName, lat: mid.lat, lng: mid.lng });
   } else {
-    const targetCity = getNearestMajorCity(mid.lat, mid.lng);
-    targetLat = targetCity.lat;
-    targetLng = targetCity.lng;
-    regionName = targetCity.name;
+    targetRegions = getNearestMajorCities(mid.lat, mid.lng);
   }
 
-  // 💡 장소 비교 기능이 이 좌표를 가져다 쓸 수 있도록 전역 변수에 박제합니다!
-  finalTargetLat = targetLat;
-  finalTargetLng = targetLng;
-
   const resultArea = document.getElementById("resultArea");
-  resultArea.innerHTML = '<div class="empty">Gemini가 최적의 장소를 추천하고 있어요... 🤖⏳</div>';
+  resultArea.innerHTML = `<div class="empty">Gemini AI가 단순 검색을 넘어 진짜 숨은 맛집을 검증하고 있어요... 🤖🔎</div>`;
+  
   lastPlaces = [];
   clearRouteLines();
   document.getElementById("routeArea").innerHTML = "";
-
+  
   let categories = [...new Set(lastParticipants.flatMap(p => p.categories || []))];
   if (categories.length === 0) categories = ["맛집", "카페"];
-
-  const pricePref = document.getElementById("priceGroupPref").value;
-  let html = `<div class="lead">모임 지역 <strong>(${escapeHtml(regionName)})</strong> 기준 추천 결과입니다.</div>`;
-
-  for (const cat of categories) {
-    const searchKeyword = `${regionName} ${cat}`;
-    // 💡 "가성비"라는 값 대신 카카오 API가 더 풍부하게 찾을 수 있도록 "가성비 맛집" 등의 패턴으로 보정
-    let finalKeyword = searchKeyword;
-    if (pricePref) {
-      if (pricePref.includes("가성비")) {
-        finalKeyword = `${searchKeyword} 가성비`; // 또는 자연스러운 키워드로 조립
-      } else {
-        finalKeyword = `${searchKeyword} ${pricePref}`;
+  
+  // 사용자가 선택한 가격 옵션 가져오기
+  const pricePref = document.getElementById("priceGroupPref").value; 
+  let html = "";
+  
+  for (let i = 0; i < targetRegions.length; i++) {
+    const region = targetRegions[i];
+    const rankTitle = targetRegions.length > 1 ? `${i + 1}순위 추천 거점: ` : "모임 지역: ";
+    const dividerStyle = i > 0 ? 'margin-top: 30px; border-top: 2px dashed #ccc; padding-top: 20px;' : '';
+    
+    html += `<div class="lead" style="${dividerStyle}">${rankTitle}<strong>${escapeHtml(region.name)}</strong></div>`;
+             
+    for (const cat of categories) {
+      // 1단계: 카카오 API에는 순수한 키워드로 후보 장소들을 넉넉하게 15개 긁어옵니다.
+      const searchKeyword = `${region.name} ${cat}`;
+      const rawPlaces = await searchPlaces(searchKeyword, region.lat, region.lng);
+      
+      html += `<h3 style="margin-top:12px;">${escapeHtml(cat)}</h3>`;
+      
+      if (rawPlaces.length === 0) {
+        html += `<div class="empty">"${escapeHtml(region.name)}" 주변에서 "${escapeHtml(cat)}" 장소를 찾지 못했어요.</div>`;
+        continue;
       }
-    }
-    
-    const places = await searchPlaces(finalKeyword, targetLat, targetLng);
-    html += `<h3 style="margin-top:12px;">${escapeHtml(cat)}</h3>`;
-    
-    if (places.length === 0) {
-      html += `<div class="empty">근처에서 "${escapeHtml(cat)}" 관련 장소를 찾지 못했어요.</div>`;
-    } else {
-      html += placeCardHtml(places[0]);
+
+      // 2단계: 긁어온 장소 데이터 리스트를 정제하여 Gemini AI에게 판단용 프롬프트로 넘깁니다.
+      const placesInfo = rawPlaces.slice(0, 15).map((p, idx) => ({
+        index: idx,
+        name: p.place_name,
+        category: p.category_name,
+        address: p.road_address_name || p.address_name,
+        url: p.place_url
+      }));
+
+      // Gemini에게 "이 가격대에 걸맞은 진짜 최고의 가게 1개를 골라라"라고 요청
+      const aiPrompt = `
+        사용자가 원하는 모임 특성 정보입니다.
+        - 지역/카카오 검색어: ${searchKeyword}
+        - 원하는 가격대 선호도: ${pricePref || "맛집(평 좋은 곳)"}
+        
+        아래는 카카오 맵 검색 결과로 나온 후보 장소 리스트입니다.
+        ${JSON.stringify(placesInfo, null, 2)}
+        
+        [미션]
+        선호도가 '가성비 위주'라면 가격 부담이 적고 대중적인 곳을, '프리미엄/고급'이라면 분위기가 좋고 평점이 우수한 곳을, '맛집(평 좋은 곳)'이라면 전반적인 평가가 가장 훌륭한 곳을 기준 삼아 위 리스트 중 딱 '1개'의 최종 index 번호만 선택하세요.
+        응답은 다른 말은 전혀 하지 말고 오직 매칭되는 장소의 index 숫자 하나만 반환하세요. 예: 0
+      `;
+
+      let selectedIndex = 0; // 기본값은 카카오 검색 1등
+      try {
+        // 프로젝트 내 정의된 callGemini 또는 gemini.chat 함수 명칭에 맞게 연동하세요.
+        // 여기서는 기존 프로젝트 구조의 AI 호출 함수 방식을 차용합니다.
+        const aiResponse = await callGeminiApi(aiPrompt); 
+        const parsedIdx = parseInt(aiResponse.replace(/[^0-9]/g, ""), 10);
+        if (!isNaN(parsedIdx) && parsedIdx >= 0 && parsedIdx < rawPlaces.length) {
+          selectedIndex = parsedIdx;
+        }
+      } catch (e) {
+        console.error("AI 필터링 실패, 카카오 기본 결과로 대체합니다.", e);
+      }
+
+      // 3단계: AI가 꼼꼼하게 엄선한 최종 1개의 장소 카드를 띄웁니다.
+      const finalBestPlace = rawPlaces[selectedIndex];
+      html += placeCardHtml(finalBestPlace);
     }
   }
+  
   resultArea.innerHTML = html;
 };
+
+// 프로젝트 환경에 맞는 AI 호출 헬퍼 함수 (필요시 맞춤 수정)
+async function callGeminiApi(prompt) {
+  // 기존 프로젝트의 Gemini API 호출 코드가 명명된 내장 함수나 fetch 모듈이 있다면 
+  // 그에 맞게 return 구조를 연결해 주시면 됩니다. 기본 예시 구조입니다.
+  if (window.gemini && typeof window.gemini.chat === "function") {
+    return await window.gemini.chat(prompt);
+  }
+  // 백엔드 API 포트나 라우트가 존재할 경우의 fallback
+  const response = await fetch("/api/chat", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ prompt })
+  });
+  const data = await response.json();
+  return data.reply || "";
+}
 
 window.compareCategories = async () => {
   if (lastParticipants.length < 2) return alert("멤버가 2명 이상이어야 비교할 수 있어요.");
