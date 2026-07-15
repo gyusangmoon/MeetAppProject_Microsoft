@@ -1074,14 +1074,29 @@ function loadParticipants() {
   });
 }
 
+// 머릿수에 끌려가지 않고 '가장 끝과 끝'의 정중앙을 구하는 방식 (Bounding Box 중심)
 function computeMidpoint(participants) {
   const valid = participants.filter(p => typeof p.lat === "number" && typeof p.lng === "number");
   if (valid.length === 0) return null;
-  
-  const lat = valid.reduce((s, p) => s + p.lat, 0) / valid.length;
-  const lng = valid.reduce((s, p) => s + p.lng, 0) / valid.length;
-  return { lat, lng };
+  if (valid.length === 1) return { lat: valid[0].lat, lng: valid[0].lng };
+
+  let minLat = 90, maxLat = -90;
+  let minLng = 180, maxLng = -180;
+
+  valid.forEach(p => {
+    if (p.lat < minLat) minLat = p.lat;
+    if (p.lat > maxLat) maxLat = p.lat;
+    if (p.lng < minLng) minLng = p.lng;
+    if (p.lng > maxLng) maxLng = p.lng;
+  });
+
+  // 가장 외곽에 있는 멤버들의 위도/경도 절반을 구해 절대적 중간 지점 반환
+  return {
+    lat: (minLat + maxLat) / 2,
+    lng: (minLng + maxLng) / 2
+  };
 }
+
 // 1. 전국 주요 거점 도시 리스트 및 자석 함수
 const MAJOR_CITIES = [
   { name: "대전광역시", lat: 36.3504, lng: 127.3845 },
