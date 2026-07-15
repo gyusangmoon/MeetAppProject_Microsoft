@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -1333,11 +1332,9 @@ async function callRecommendApi(places, category, preference) {
 // 응답으로 온 상호명을 카카오 원본 후보와 매칭해서(위/경도, 카테고리 등 원본 필드를 보존) 반환하는 함수.
 // (카카오 JS SDK는 평점/리뷰 수치를 직접 제공하지 않으므로, server.js 프롬프트에서 명시한 대로
 //  AI가 상호명/카테고리/주소 패턴을 근거로 가격대·성격을 추정해서 고릅니다)
-async function aiRankPlaces(regionName, categoryLabel, places, pricePref, topN, excludeNames = new Set()) {
+async function aiRankPlaces(regionName, categoryLabel, places, pricePref, topN) {
   if (!places || places.length === 0) return [];
-  const filteredPlaces = places.filter(p => !excludeNames.has(p.place_name));
-  if (filteredPlaces.length === 0) return [];
-  const candidates = filteredPlaces.slice(0, 15);
+  const candidates = places.slice(0, 15);
   const payload = candidates.map(p => ({
     name: p.place_name,
     category: (p.category_name || "").split(">").pop().trim(),
@@ -1383,33 +1380,9 @@ async function aiRankPlaces(regionName, categoryLabel, places, pricePref, topN, 
   }
 }
 
-let lastRecommendState = null;
-
-async function buildRecommendationHtml(state) {
-  let html = "";
-  let addedAny = false;
-  const { targetRegions, categories, pricePref, shownNames } = state;
-
-  for (const region of targetRegions) {
-    for (const cat of categories) {
-      const searchKeyword = `${region.name} ${cat}`;
-      const rawPlaces = await searchPlaces(searchKeyword, region.lat, region.lng);
-      if (rawPlaces.length === 0) continue;
-
-      const picked = await aiRankPlaces(region.name, cat, rawPlaces, pricePref, 1, shownNames);
-      picked.forEach(item => {
-        shownNames.add(item.place.place_name);
-        html += placeCardHtml(item.place, item.reason);
-        addedAny = true;
-      });
-    }
-  }
-  return { html, addedAny };
-}
-
 window.recommendLocation = async () => {
   if (lastParticipants.length < 2) return alert("멤버가 2명 이상이어야 추천할 수 있어요.");
-
+  
   let mid = computeMidpoint(lastParticipants);
   if (!mid) return alert("먼저 멤버들의 주소가 등록되어야 해요.");
 
@@ -1419,7 +1392,7 @@ window.recommendLocation = async () => {
     if (dist > maxDist) maxDist = dist;
   });
 
-  let targetRegions = [];
+  let targetRegions = []; 
   if (maxDist < 40) {
     const regionName = await getExactRegionName(mid.lat, mid.lng);
     targetRegions.push({ name: regionName, lat: mid.lat, lng: mid.lng });
@@ -1429,92 +1402,54 @@ window.recommendLocation = async () => {
 
   const resultArea = document.getElementById("resultArea");
   resultArea.innerHTML = `<div class="empty">AI가 카카오맵 후보들을 분석해서 가장 잘 맞는 곳을 고르고 있어요... 🤖🔎</div>`;
-
+  
   lastPlaces = [];
   clearRouteLines();
   document.getElementById("routeArea").innerHTML = "";
-
+  
   let categories = [...new Set(lastParticipants.flatMap(p => p.categories || []))];
   if (categories.length === 0) categories = ["맛집", "카페"];
+  
+  const pricePref = document.getElementById("priceGroupPref").value; 
+  let html = "";
 
-  const pricePref = document.getElementById("priceGroupPref").value;
+  for (let i = 0; i < targetRegions.length; i++) {
+    const region = targetRegions[i];
 
-  lastRecommendState = { targetRegions, categories, pricePref, shownNames: new Set() };
+    for (const cat of categories) {
+      const searchKeyword = `${region.name} ${cat}`;
+      const rawPlaces = await searchPlaces(searchKeyword, region.lat, region.lng);
+      
+      if (rawPlaces.length === 0) {
+        html += `<div class="empty">"${region.name}" 주변에서 "${cat}" 장소를 찾지 못했어요.</div>`;
+        continue;
+      }
 
-  const { html } = await buildRecommendationHtml(lastRecommendState);
-  resultArea.innerHTML = (html || '<div class="empty">추천할 장소를 찾지 못했어요.</div>')
-    + `<button class="dark" type="button" style="margin-top:6px;" onclick="refreshRecommendLocation()">🔄 다른 장소로 다시 추천받기</button>`;
-};
-
-window.refreshRecommendLocation = async () => {
-  if (!lastRecommendState) return;
-  const resultArea = document.getElementById("resultArea");
-  const prevHtml = resultArea.innerHTML;
-  resultArea.innerHTML = `<div class="empty">다른 장소를 찾고 있어요... 🤖🔎</div>`;
-
-  const { html, addedAny } = await buildRecommendationHtml(lastRecommendState);
-
-  if (!addedAny) {
-    alert("더 이상 보여드릴 새로운 장소가 없어요. 카테고리를 바꾸거나 나중에 다시 시도해보세요!");
-    resultArea.innerHTML = prevHtml;
-    return;
+      const picked = await aiRankPlaces(region.name, cat, rawPlaces, pricePref, 1);
+      picked.forEach(item => {
+        html += placeCardHtml(item.place, item.reason);
+      });
+    }
   }
-  resultArea.innerHTML = html
-    + `<button class="dark" type="button" style="margin-top:6px;" onclick="refreshRecommendLocation()">🔄 다른 장소로 다시 추천받기</button>`;
+  
+  resultArea.innerHTML = html;
 };
-
-let lastCompareState = null;
-
-async function buildCompareHtml(state) {
-  const { regionName, targetLat, targetLng, catA, catB, pricePref, shownA, shownB } = state;
-
-  const [placesA, placesB] = await Promise.all([
-    searchPlaces(`${regionName} ${catA}`, targetLat, targetLng),
-    searchPlaces(`${regionName} ${catB}`, targetLat, targetLng)
-  ]);
-
-  const [rankedA, rankedB] = await Promise.all([
-    aiRankPlaces(regionName, catA, placesA, pricePref, 3, shownA),
-    aiRankPlaces(regionName, catB, placesB, pricePref, 3, shownB)
-  ]);
-
-  rankedA.forEach(r => shownA.add(r.place.place_name));
-  rankedB.forEach(r => shownB.add(r.place.place_name));
-
-  const colHtml = (label, ranked) => {
-    let inner = `<h3>${escapeHtml(label)}</h3>`;
-    inner += ranked.length === 0
-      ? '<div class="empty">더 이상 새로운 결과가 없어요.</div>'
-      : ranked.map(r => placeCardHtml(r.place, r.reason)).join("");
-    return `<div class="col">${inner}</div>`;
-  };
-
-  const addedAny = rankedA.length > 0 || rankedB.length > 0;
-  const html = `
-    <div class="lead">모임 지역 <strong>(${escapeHtml(regionName)})</strong> 기준, AI가 분석한 추천 결과입니다.</div>
-    <div class="compare-cols">
-      ${colHtml(catA, rankedA)}
-      ${colHtml(catB, rankedB)}
-    </div>`;
-
-  return { html, addedAny };
-}
 
 window.compareCategories = async () => {
   if (lastParticipants.length < 2) return alert("멤버가 2명 이상이어야 비교할 수 있어요.");
   const mid = computeMidpoint(lastParticipants);
   if (!mid) return alert("먼저 멤버들의 주소가 등록되어야 해요.");
-
+  
   const catA = document.getElementById("compare").value.trim();
   const catB = document.getElementById("compareB").value.trim();
   if (!catA || !catB) return alert("비교할 카테고리 두 개를 모두 입력해주세요.");
-
+  
   const compareArea = document.getElementById("compareArea");
   compareArea.innerHTML = '<div class="empty">AI가 두 카테고리의 후보를 비교 분석하고 있어요... 🤖⏳</div>';
   lastPlaces = [];
   clearRouteLines();
   document.getElementById("routeArea").innerHTML = "";
-
+  
   let maxDist = 0;
   lastParticipants.forEach(p => {
     const dist = haversineKm(mid.lat, mid.lng, p.lat, p.lng);
@@ -1522,38 +1457,50 @@ window.compareCategories = async () => {
   });
 
   let targetLat, targetLng, regionName;
+
   if (maxDist < 40) {
-    targetLat = mid.lat; targetLng = mid.lng;
+    targetLat = mid.lat;
+    targetLng = mid.lng;
     regionName = await getExactRegionName(targetLat, targetLng);
   } else {
     const targetCity = getNearestMajorCity(mid.lat, mid.lng);
-    targetLat = targetCity.lat; targetLng = targetCity.lng; regionName = targetCity.name;
+    targetLat = targetCity.lat;
+    targetLng = targetCity.lng;
+    regionName = targetCity.name;
   }
 
   const pricePref = document.getElementById("priceComparePref").value;
 
-  lastCompareState = { regionName, targetLat, targetLng, catA, catB, pricePref, shownA: new Set(), shownB: new Set() };
+  const searchKeywordA = `${regionName} ${catA}`;
+  const searchKeywordB = `${regionName} ${catB}`;
 
-  const { html } = await buildCompareHtml(lastCompareState);
-  compareArea.innerHTML = html
-    + `<button class="dark" type="button" style="margin-top:10px;width:100%;" onclick="refreshCompareCategories()">🔄 다른 후보로 다시 비교하기</button>`;
-};
+  const [placesA, placesB] = await Promise.all([
+    searchPlaces(searchKeywordA, targetLat, targetLng),
+    searchPlaces(searchKeywordB, targetLat, targetLng)
+  ]);
 
-window.refreshCompareCategories = async () => {
-  if (!lastCompareState) return;
-  const compareArea = document.getElementById("compareArea");
-  const prevHtml = compareArea.innerHTML;
-  compareArea.innerHTML = '<div class="empty">다른 후보를 찾고 있어요... 🤖⏳</div>';
+  const [rankedA, rankedB] = await Promise.all([
+    aiRankPlaces(regionName, catA, placesA, pricePref, 3),
+    aiRankPlaces(regionName, catB, placesB, pricePref, 3)
+  ]);
 
-  const { html, addedAny } = await buildCompareHtml(lastCompareState);
+  const colHtml = (label, ranked) => {
+    let inner = `<h3>${escapeHtml(label)}</h3>`;
+    if (ranked.length === 0) {
+      inner += '<div class="empty">결과가 없어요.</div>';
+    } else {
+      inner += ranked.map(r => placeCardHtml(r.place, r.reason)).join("");
+    }
+    return `<div class="col">${inner}</div>`;
+  };
 
-  if (!addedAny) {
-    alert("더 이상 보여드릴 새로운 후보가 없어요. 카테고리를 바꾸거나 나중에 다시 시도해보세요!");
-    compareArea.innerHTML = prevHtml;
-    return;
-  }
-  compareArea.innerHTML = html
-    + `<button class="dark" type="button" style="margin-top:10px;width:100%;" onclick="refreshCompareCategories()">🔄 다른 후보로 다시 비교하기</button>`;
+  compareArea.innerHTML = `
+    <div class="lead">모임 지역 <strong>(${escapeHtml(regionName)})</strong> 기준, AI가 분석한 추천 결과입니다.</div>
+    <div class="compare-cols">
+      ${colHtml(catA, rankedA)}
+      ${colHtml(catB, rankedB)}
+    </div>
+  `;
 };
 
 let calendarViewDate = new Date();
