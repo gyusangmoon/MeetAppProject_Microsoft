@@ -36,22 +36,18 @@ body {
   justify-content: center;
   padding: 32px 16px;
 
-  /* ===== [배경 디자인 변경] 7-14-3에서 적용 =====
-     은은한 여행/풍경 느낌의 배경 이미지를 깔고, 그 위에 앱의 파스텔 톤과
-     어울리는 반투명 그라데이션 오버레이를 얹어 채도를 낮춤으로써
-     본문 카드/텍스트의 가독성을 해치지 않도록 처리했습니다. */
   background-image:
     linear-gradient(180deg, rgba(250, 232, 251, 0.88) 0%, rgba(242, 220, 243, 0.82) 45%, rgba(227, 213, 235, 0.9) 100%),
     url("https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1600&q=60");
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
-  background-attachment: fixed; /* 스크롤해도 배경이 함께 흐르지 않도록 고정 */
+  background-attachment: fixed;
 }
 #phone {
   width: 100%;
   max-width: 440px;
-  background: rgba(242, 220, 243, 0.55); /* 배경 이미지가 은은하게 비치도록 반투명 처리 */
+  background: rgba(242, 220, 243, 0.55);
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
   border-radius: 34px;
@@ -216,7 +212,6 @@ button.vote-btn.voted { background: var(--accent-soft); border-color: var(--acce
 .my-group-item { display: flex; justify-content: space-between; align-items: center; background: var(--card-cream); border-radius: 14px; padding: 10px 12px; margin-bottom: 8px; }
 .my-group-item .name { font-weight: 800; font-size: 13px; color: var(--ink); }
 
-/* 챗봇 플로팅 버튼 및 채팅창 CSS 스타일 */
 #chatbot-launcher {
   position: fixed;
   bottom: 24px;
@@ -311,7 +306,6 @@ button.vote-btn.voted { background: var(--accent-soft); border-color: var(--acce
   cursor: pointer;
 }
 
-/* 개인 일정(캘린더) 관련 CSS */
 .day-cell {
   position: relative;
   margin: 0;
@@ -438,12 +432,10 @@ button.vote-btn.voted { background: var(--accent-soft); border-color: var(--acce
 .agenda-item .actions .edit-btn { background: var(--accent-soft); color: var(--ink); }
 .agenda-item .actions .del-btn { background: transparent; color: var(--danger); border: 1px solid var(--danger); }
 
-/* ===== [신규] BGM(배경음악) 컨트롤러 CSS =====
-   챗봇 플로팅 아이콘 '바로 왼쪽'에 배치됩니다. */
 #bgmController {
   position: fixed;
   bottom: 24px;
-  right: 92px; /* 챗봇 아이콘(56px) + 여백만큼 왼쪽으로 이동 */
+  right: 92px;
   z-index: 2147483000;
   display: flex;
   align-items: center;
@@ -475,7 +467,6 @@ button.vote-btn.voted { background: var(--accent-soft); border-color: var(--acce
   accent-color: var(--accent-deep);
   cursor: pointer;
 }
-/* 모바일 좁은 화면에서는 볼륨 슬라이더를 살짝 접어 공간을 아낌 */
 @media (max-width: 380px) {
   #bgmVolume { width: 46px; }
   #bgmController { right: 82px; padding: 6px 8px; gap: 6px; }
@@ -667,11 +658,9 @@ button.vote-btn.voted { background: var(--accent-soft); border-color: var(--acce
     <button class="primary" onclick="saveEvent()">일정 저장하기</button>
   </div>
 </div>
-<!-- ===== [신규] BGM 배경음악 컨트롤러 (챗봇 아이콘 바로 왼쪽) ===== -->
 <div id="bgmController">
   <button id="bgmToggleBtn" onclick="toggleBgm()" aria-label="배경음악 재생/정지">🎵</button>
   <input type="range" id="bgmVolume" min="0" max="100" value="35" oninput="setBgmVolume(this.value)" aria-label="음량 조절">
-  <!-- 저작권 없는 잔잔한 로파이/카페풍 샘플 오디오 -->
   <audio id="bgmAudio" loop preload="none">
     <source src="https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3" type="audio/mpeg">
   </audio>
@@ -697,7 +686,6 @@ button.vote-btn.voted { background: var(--accent-soft); border-color: var(--acce
     import { getFirestore, collection, addDoc, query, where, onSnapshot, getDocs, doc, getDoc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
     import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-// 파이어베이스 설정 (본인 정보 유지)
     const firebaseConfig = {
         apiKey: "AIzaSyCuFkfVGEBOw0DgFc_HHFVNwH7MygwywFo",
         authDomain: "database-f30fe.firebaseapp.com",
@@ -711,6 +699,11 @@ button.vote-btn.voted { background: var(--accent-soft); border-color: var(--acce
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
     const auth = getAuth(app);
+
+    // ===== [신규] 백엔드(server.js) 주소 설정 =====
+    // Azure OpenAI 키는 server.js(.env)에만 있고, 프론트는 이 백엔드의 /api/recommend 를 호출합니다.
+    // 챗봇이 쓰는 NGROK_URL(하단 두 번째 <script> 태그)과 반드시 같은 서버 주소를 가리켜야 합니다.
+    const BACKEND_URL = "https://barmaid-unexpired-spotty.ngrok-free.dev";
 
     let currentUserNickname = "";
     let currentGroupName = "";
@@ -728,7 +721,7 @@ button.vote-btn.voted { background: var(--accent-soft); border-color: var(--acce
     let lastMessageCount = 0;
     let currentGroupData = { confirmedDate: null, confirmedPlace: null };
     let prevParticipantCount = 0;
-    let myEvents = {}; // { "2026-07-14": [{id, title, time, memo}, ...] }
+    let myEvents = {};
     let activeModalDateKey = null;
     let editingEventId = null;
     function toggleBgm() {
@@ -744,14 +737,13 @@ button.vote-btn.voted { background: var(--accent-soft); border-color: var(--acce
     }
 }
 
-// HTML에 적힌 setBgVolume과 완벽하게 이름을 맞춘 함수입니다!
 function setBgVolume(value) {
     const bgmAudio = document.getElementById('bgmAudio');
     bgmAudio.volume = Number(value) / 100;
 }
 
 window.toggleBgm = toggleBgm;
-window.setBgVolume = setBgVolume; // 전역 등록 이름도 수정 완료!
+window.setBgVolume = setBgVolume;
 
     const urlParams = new URLSearchParams(window.location.search);
     const pendingInviteGroupId = urlParams.get("group");
@@ -947,7 +939,6 @@ async function loadMyGroups() {
       if (seen.has(data.groupId)) return;
       seen.add(data.groupId);
       
-      // 모임 목록 카드와 이동/삭제 버튼 생성
       html += `<div class="my-group-item">
         <span class="name" style="flex:1;">${escapeHtml(data.groupName)}</span>
         <button class="chip" type="button" onclick="jumpToGroup('${data.groupId}', '${escapeHtml(data.groupName).replace(/'/g, "\\'")}')">join!</button>
@@ -1056,7 +1047,6 @@ function loadParticipants() {
       const li = document.createElement("li");
       li.className = "member";
       
-      // ★ 내가 등록한 주소 정보인지 확인하는 조건문입니다.
       const isMe = d.user === currentUserNickname;
       
       li.innerHTML = `
@@ -1077,7 +1067,6 @@ function loadParticipants() {
   });
 }
 
-// 머릿수에 끌려가지 않고 '가장 끝과 끝'의 정중앙을 구하는 방식 (Bounding Box 중심)
 function computeMidpoint(participants) {
   const valid = participants.filter(p => typeof p.lat === "number" && typeof p.lng === "number");
   if (valid.length === 0) return null;
@@ -1093,14 +1082,12 @@ function computeMidpoint(participants) {
     if (p.lng > maxLng) maxLng = p.lng;
   });
 
-  // 가장 외곽에 있는 멤버들의 위도/경도 절반을 구해 절대적 중간 지점 반환
   return {
     lat: (minLat + maxLat) / 2,
     lng: (minLng + maxLng) / 2
   };
 }
 
-// 1. 전국 주요 거점 도시 리스트 및 자석 함수
 const MAJOR_CITIES = [
   { name: "대전광역시", lat: 36.3504, lng: 127.3845 },
   { name: "청주시", lat: 36.6424, lng: 127.4890 },
@@ -1125,20 +1112,16 @@ function getNearestMajorCity(lat, lng) {
   return closestCity;
 }
 
-// 계산된 중간 지점과 가까운 1순위, 2순위 대도시를 모두 찾아주는 함수
 function getNearestMajorCities(lat, lng) {
-  // 거리를 기준으로 모든 대도시를 오름차순(가까운 순)으로 정렬합니다.
   const sortedCities = [...MAJOR_CITIES].sort((a, b) => {
     const distA = haversineKm(lat, lng, a.lat, a.lng);
     const distB = haversineKm(lat, lng, b.lat, b.lng);
     return distA - distB;
   });
   
-  // 정렬된 리스트에서 1등과 2등만 쏙 뽑아서 배열로 반환!
   return [sortedCities[0], sortedCities[1]];
 }
 
-// 2. 동네 모임일 때 진짜 동네 한글 이름을 가져오는 함수
 function getExactRegionName(lat, lng) {
   return new Promise((resolve) => {
     const geocoder = new kakao.maps.services.Geocoder();
@@ -1300,7 +1283,7 @@ function searchPlaces(keyword, lat, lng, radius = 20000) {
   });
 }
 
-function placeCardHtml(place) {
+function placeCardHtml(place, aiReason) {
   const idx = registerPlace(place);
   const name = place.place_name;
   const voteCount = voteCounts[name] || 0;
@@ -1311,6 +1294,7 @@ function placeCardHtml(place) {
       <div class="cat">${escapeHtml((place.category_name || "").split(">").pop().trim())}</div>
       <div class="addr">${escapeHtml(place.road_address_name || place.address_name)}</div>
       <div class="addr">중간 지점에서 약 ${place.distance ? Math.round(place.distance) + "m" : "-"}</div>
+      ${aiReason ? `<div class="addr" style="color:var(--ink); font-weight:700;">🤖 AI 추천 이유: ${escapeHtml(aiReason)}</div>` : ""}
       <a href="${place.place_url}" target="_blank" rel="noopener">카카오맵에서 리뷰 보기 →</a>
       <div class="vote-row">
         <button class="vote-btn ${voted ? "voted" : ""}" type="button" data-vote-name="${escapeHtml(name)}" onclick="toggleVote(${idx})">투표${voted ? "함" : "하기"}</button>
@@ -1323,9 +1307,109 @@ function placeCardHtml(place) {
     </div>`;
 }
 
+// ===== [신규] 백엔드(server.js /api/recommend) 호출 헬퍼 =====
+// Azure OpenAI 키는 서버(.env)에만 있고, 프론트는 카카오 검색 결과 후보만 넘겨서
+// "이름/주소/이유/링크" 형태의 추천을 받아옵니다.
+async function callRecommendApi(places, category, preference) {
+  const response = await fetch(`${BACKEND_URL}/api/recommend`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ places, category, preference: preference || "일반" })
+  });
+  if (!response.ok) {
+    const errText = await response.text().catch(() => "");
+    throw new Error(`추천 서버 응답 오류 (${response.status}) ${errText}`);
+  }
+  const data = await response.json();
+  console.log("[recommend] /api/recommend 원본 응답 →", data);
+  if (!Array.isArray(data.recommendations)) {
+    console.warn("[recommend] 응답에 recommendations 배열이 없어요. 서버 응답 구조를 확인해보세요:", data);
+    return [];
+  }
+  return data.recommendations;
+}
+
+// 카카오 검색 후보 리스트를 서버(/api/recommend)에 보내 상위 N개를 이유와 함께 받아오고,
+// 응답으로 온 상호명을 카카오 원본 후보와 매칭해서(위/경도, 카테고리 등 원본 필드를 보존) 반환하는 함수.
+// (카카오 JS SDK는 평점/리뷰 수치를 직접 제공하지 않으므로, server.js 프롬프트에서 명시한 대로
+//  AI가 상호명/카테고리/주소 패턴을 근거로 가격대·성격을 추정해서 고릅니다)
+async function aiRankPlaces(regionName, categoryLabel, places, pricePref, topN, excludeNames = new Set()) {
+  if (!places || places.length === 0) return [];
+  const filteredPlaces = places.filter(p => !excludeNames.has(p.place_name));
+  if (filteredPlaces.length === 0) return [];
+  const candidates = filteredPlaces.slice(0, 15);
+  const payload = candidates.map(p => ({
+    name: p.place_name,
+    category: (p.category_name || "").split(">").pop().trim(),
+    address: p.road_address_name || p.address_name || "",
+    distance: p.distance ? Math.round(p.distance) : null,
+    link: p.place_url || ""
+  }));
+
+  try {
+    const recs = await callRecommendApi(payload, `${regionName} ${categoryLabel}`, pricePref);
+    console.log("[recommend] payload →", payload);
+    console.log("[recommend] server 응답 recommendations →", recs);
+
+    if (!recs || recs.length === 0) {
+      throw new Error("서버가 추천 결과를 0개 반환했어요. server.js 콘솔에서 AI 원본 응답을 확인해보세요.");
+    }
+
+    // 공백/대소문자/괄호 등 사소한 표기 차이에도 매칭되도록 이름을 정규화
+    const norm = (s) => (s || "").toString().toLowerCase().replace(/[\s()\[\]·,.\-]/g, "");
+    const usedIdx = new Set();
+    const picked = recs
+      .map(r => {
+        const rNameNorm = norm(r.name);
+        if (!rNameNorm) return null;
+        let matchIdx = candidates.findIndex((p, i) => !usedIdx.has(i) && norm(p.place_name) === rNameNorm);
+        if (matchIdx === -1) matchIdx = candidates.findIndex((p, i) => !usedIdx.has(i) && norm(p.place_name).includes(rNameNorm));
+        if (matchIdx === -1) matchIdx = candidates.findIndex((p, i) => !usedIdx.has(i) && rNameNorm.includes(norm(p.place_name)));
+        if (matchIdx === -1) return null;
+        usedIdx.add(matchIdx);
+        return { place: candidates[matchIdx], reason: (r.reason || "").toString() };
+      })
+      .filter(Boolean)
+      .slice(0, topN);
+
+    if (picked.length === 0) {
+      console.warn("[recommend] 이름 매칭에 모두 실패했어요. 서버가 돌려준 name 값이 후보 리스트의 place_name과 다른지 확인해보세요.");
+      throw new Error("empty selection");
+    }
+    return picked;
+  } catch (e) {
+    console.error("AI 추천 서버 호출 실패, 기본 정렬(거리순)로 대체", e);
+    return candidates.slice(0, topN).map(p => ({ place: p, reason: "" }));
+  }
+}
+
+let lastRecommendState = null;
+
+async function buildRecommendationHtml(state) {
+  let html = "";
+  let addedAny = false;
+  const { targetRegions, categories, pricePref, shownNames } = state;
+
+  for (const region of targetRegions) {
+    for (const cat of categories) {
+      const searchKeyword = `${region.name} ${cat}`;
+      const rawPlaces = await searchPlaces(searchKeyword, region.lat, region.lng);
+      if (rawPlaces.length === 0) continue;
+
+      const picked = await aiRankPlaces(region.name, cat, rawPlaces, pricePref, 1, shownNames);
+      picked.forEach(item => {
+        shownNames.add(item.place.place_name);
+        html += placeCardHtml(item.place, item.reason);
+        addedAny = true;
+      });
+    }
+  }
+  return { html, addedAny };
+}
+
 window.recommendLocation = async () => {
   if (lastParticipants.length < 2) return alert("멤버가 2명 이상이어야 추천할 수 있어요.");
-  
+
   let mid = computeMidpoint(lastParticipants);
   if (!mid) return alert("먼저 멤버들의 주소가 등록되어야 해요.");
 
@@ -1335,7 +1419,7 @@ window.recommendLocation = async () => {
     if (dist > maxDist) maxDist = dist;
   });
 
-  let targetRegions = []; 
+  let targetRegions = [];
   if (maxDist < 40) {
     const regionName = await getExactRegionName(mid.lat, mid.lng);
     targetRegions.push({ name: regionName, lat: mid.lat, lng: mid.lng });
@@ -1344,124 +1428,93 @@ window.recommendLocation = async () => {
   }
 
   const resultArea = document.getElementById("resultArea");
-  resultArea.innerHTML = `<div class="empty">Gemini AI가 단순 검색을 넘어 진짜 숨은 맛집을 검증하고 있어요... 🤖🔎</div>`;
-  
+  resultArea.innerHTML = `<div class="empty">AI가 카카오맵 후보들을 분석해서 가장 잘 맞는 곳을 고르고 있어요... 🤖🔎</div>`;
+
   lastPlaces = [];
   clearRouteLines();
   document.getElementById("routeArea").innerHTML = "";
-  
+
   let categories = [...new Set(lastParticipants.flatMap(p => p.categories || []))];
   if (categories.length === 0) categories = ["맛집", "카페"];
-  
-  const pricePref = document.getElementById("priceGroupPref").value; 
-  let html = "";
-  
-  for (let i = 0; i < targetRegions.length; i++) {
-    const region = targetRegions[i];
-    const rankTitle = targetRegions.length > 1 ? `${i + 1}순위 추천 거점: ` : "모임 지역: ";
-    const dividerStyle = i > 0 ? 'margin-top: 30px; border-top: 2px dashed #ccc; padding-top: 20px;' : '';
-    
-    html += `<div class="lead" style="${dividerStyle}">${rankTitle}<strong>${escapeHtml(region.name)}</strong></div>`;
-             
-    for (const cat of categories) {
-      const searchKeyword = `${region.name} ${cat}`;
-      const rawPlaces = await searchPlaces(searchKeyword, region.lat, region.lng);
-      
-      html += `<h3 style="margin-top:12px;">${escapeHtml(cat)}</h3>`;
-      
-      if (rawPlaces.length === 0) {
-        html += `<div class="empty">"${escapeHtml(region.name)}" 주변에서 "${escapeHtml(cat)}" 장소를 찾지 못했어요.</div>`;
-        continue;
-      }
 
-      const placesInfo = rawPlaces.slice(0, 15).map((p, idx) => ({
-        index: idx,
-        name: p.place_name,
-        category: p.category_name,
-        address: p.road_address_name || p.address_name,
-        url: p.place_url
-      }));
+  const pricePref = document.getElementById("priceGroupPref").value;
 
-      // [수정된 AI 프롬프트]
-      const aiPrompt = `
-        사용자 요청: ${pricePref || "맛집(평 좋은 곳)"}
-        검색 키워드: ${searchKeyword}
-        
-        [제공된 후보 리스트]
-        ${JSON.stringify(placesInfo, null, 2)}
-        
-        [엄격한 선택 기준]
-        1. 가성비 위주: '가성비', '양', '부담 없는', '학생' 등의 키워드가 포함된 리뷰가 있을 법한 곳을 선택.
-        2. 맛집(평 좋은 곳): '맛', '재방문', '친절', '줄 서는' 등 긍정적 후기가 가장 많을 것으로 예상되는 곳을 선택.
-        3. 프리미엄/고급: '분위기', '고급스러운', '데이트', '조용한', '정갈한' 등의 단어가 어울리는 곳을 선택.
-        
-        [미션]
-        위 기준에 맞춰 위 리스트 중 딱 '1개'를 선정하고, 그 index 값만 반환하세요.
-        만약 리스트에 적합한 곳이 없다고 판단되면 가장 무난한 곳을 골라주세요.
-        답변은 반드시 숫자(index)만 출력하세요. 예: 3
-      `;
+  lastRecommendState = { targetRegions, categories, pricePref, shownNames: new Set() };
 
-      let selectedIndex = 0; 
-      try {
-        const aiResponse = await callGeminiApi(aiPrompt); 
-        const parsedIdx = parseInt(aiResponse.replace(/[^0-9]/g, ""), 10);
-        if (!isNaN(parsedIdx) && parsedIdx >= 0 && parsedIdx < rawPlaces.length) {
-          selectedIndex = parsedIdx;
-        }
-      } catch (e) {
-        console.error("AI 필터링 실패, 카카오 기본 결과로 대체합니다.", e);
-      }
-
-      const finalBestPlace = rawPlaces[selectedIndex];
-      html += placeCardHtml(finalBestPlace);
-    }
-  }
-  
-  resultArea.innerHTML = html;
+  const { html } = await buildRecommendationHtml(lastRecommendState);
+  resultArea.innerHTML = (html || '<div class="empty">추천할 장소를 찾지 못했어요.</div>')
+    + `<button class="dark" type="button" style="margin-top:6px;" onclick="refreshRecommendLocation()">🔄 다른 장소로 다시 추천받기</button>`;
 };
 
-      // 3단계: AI가 꼼꼼하게 엄선한 최종 1개의 장소 카드를 띄웁니다.
-      const finalBestPlace = rawPlaces[selectedIndex];
-      html += placeCardHtml(finalBestPlace);
-    }
+window.refreshRecommendLocation = async () => {
+  if (!lastRecommendState) return;
+  const resultArea = document.getElementById("resultArea");
+  const prevHtml = resultArea.innerHTML;
+  resultArea.innerHTML = `<div class="empty">다른 장소를 찾고 있어요... 🤖🔎</div>`;
+
+  const { html, addedAny } = await buildRecommendationHtml(lastRecommendState);
+
+  if (!addedAny) {
+    alert("더 이상 보여드릴 새로운 장소가 없어요. 카테고리를 바꾸거나 나중에 다시 시도해보세요!");
+    resultArea.innerHTML = prevHtml;
+    return;
   }
-  
-  resultArea.innerHTML = html;
+  resultArea.innerHTML = html
+    + `<button class="dark" type="button" style="margin-top:6px;" onclick="refreshRecommendLocation()">🔄 다른 장소로 다시 추천받기</button>`;
 };
 
-// 프로젝트 환경에 맞는 AI 호출 헬퍼 함수 (필요시 맞춤 수정)
-async function callGeminiApi(prompt) {
-  // 기존 프로젝트의 Gemini API 호출 코드가 명명된 내장 함수나 fetch 모듈이 있다면 
-  // 그에 맞게 return 구조를 연결해 주시면 됩니다. 기본 예시 구조입니다.
-  if (window.gemini && typeof window.gemini.chat === "function") {
-    return await window.gemini.chat(prompt);
-  }
-  // 백엔드 API 포트나 라우트가 존재할 경우의 fallback
-  const response = await fetch("/api/chat", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ prompt })
-  });
-  const data = await response.json();
-  return data.reply || "";
+let lastCompareState = null;
+
+async function buildCompareHtml(state) {
+  const { regionName, targetLat, targetLng, catA, catB, pricePref, shownA, shownB } = state;
+
+  const [placesA, placesB] = await Promise.all([
+    searchPlaces(`${regionName} ${catA}`, targetLat, targetLng),
+    searchPlaces(`${regionName} ${catB}`, targetLat, targetLng)
+  ]);
+
+  const [rankedA, rankedB] = await Promise.all([
+    aiRankPlaces(regionName, catA, placesA, pricePref, 3, shownA),
+    aiRankPlaces(regionName, catB, placesB, pricePref, 3, shownB)
+  ]);
+
+  rankedA.forEach(r => shownA.add(r.place.place_name));
+  rankedB.forEach(r => shownB.add(r.place.place_name));
+
+  const colHtml = (label, ranked) => {
+    let inner = `<h3>${escapeHtml(label)}</h3>`;
+    inner += ranked.length === 0
+      ? '<div class="empty">더 이상 새로운 결과가 없어요.</div>'
+      : ranked.map(r => placeCardHtml(r.place, r.reason)).join("");
+    return `<div class="col">${inner}</div>`;
+  };
+
+  const addedAny = rankedA.length > 0 || rankedB.length > 0;
+  const html = `
+    <div class="lead">모임 지역 <strong>(${escapeHtml(regionName)})</strong> 기준, AI가 분석한 추천 결과입니다.</div>
+    <div class="compare-cols">
+      ${colHtml(catA, rankedA)}
+      ${colHtml(catB, rankedB)}
+    </div>`;
+
+  return { html, addedAny };
 }
 
 window.compareCategories = async () => {
   if (lastParticipants.length < 2) return alert("멤버가 2명 이상이어야 비교할 수 있어요.");
   const mid = computeMidpoint(lastParticipants);
   if (!mid) return alert("먼저 멤버들의 주소가 등록되어야 해요.");
-  
+
   const catA = document.getElementById("compare").value.trim();
   const catB = document.getElementById("compareB").value.trim();
   if (!catA || !catB) return alert("비교할 카테고리 두 개를 모두 입력해주세요.");
-  
+
   const compareArea = document.getElementById("compareArea");
-  compareArea.innerHTML = '<div class="empty">Gemini가 두 카테고리의 최적 후보를 비교하고 있어요... 🤖⏳</div>';
+  compareArea.innerHTML = '<div class="empty">AI가 두 카테고리의 후보를 비교 분석하고 있어요... 🤖⏳</div>';
   lastPlaces = [];
   clearRouteLines();
   document.getElementById("routeArea").innerHTML = "";
-  
-  // 💡 1. 멤버들이 중간 지점으로부터 얼마나 흩어져 있는지 '최대 거리' 계산
+
   let maxDist = 0;
   lastParticipants.forEach(p => {
     const dist = haversineKm(mid.lat, mid.lng, p.lat, p.lng);
@@ -1469,51 +1522,38 @@ window.compareCategories = async () => {
   });
 
   let targetLat, targetLng, regionName;
-
-  // 💡 2. 동네 모임(40km 이내)이면 원래 중간 지점 유지 / 전국 모임이면 대도시 자석 보정
   if (maxDist < 40) {
-    targetLat = mid.lat;
-    targetLng = mid.lng;
+    targetLat = mid.lat; targetLng = mid.lng;
     regionName = await getExactRegionName(targetLat, targetLng);
   } else {
     const targetCity = getNearestMajorCity(mid.lat, mid.lng);
-    targetLat = targetCity.lat;
-    targetLng = targetCity.lng;
-    regionName = targetCity.name;
+    targetLat = targetCity.lat; targetLng = targetCity.lng; regionName = targetCity.name;
   }
 
   const pricePref = document.getElementById("priceComparePref").value;
 
-  // 💡 3. 검색어 앞에 결정된 지역명(regionName)을 강제로 결합해서 전국으로 튀는 현상 방지!
-  const searchKeywordA = `${regionName} ${catA}`;
-  const searchKeywordB = `${regionName} ${catB}`;
+  lastCompareState = { regionName, targetLat, targetLng, catA, catB, pricePref, shownA: new Set(), shownB: new Set() };
 
-  const finalKeywordA = pricePref ? `${searchKeywordA} ${pricePref}` : searchKeywordA;
-  const finalKeywordB = pricePref ? `${searchKeywordB} ${pricePref}` : searchKeywordB;
+  const { html } = await buildCompareHtml(lastCompareState);
+  compareArea.innerHTML = html
+    + `<button class="dark" type="button" style="margin-top:10px;width:100%;" onclick="refreshCompareCategories()">🔄 다른 후보로 다시 비교하기</button>`;
+};
 
-  // 💡 4. 보정된 대도시 좌표 기준으로 각각 검색 실행
-  const [placesA, placesB] = await Promise.all([
-    searchPlaces(finalKeywordA, targetLat, targetLng),
-    searchPlaces(finalKeywordB, targetLat, targetLng)
-  ]);
+window.refreshCompareCategories = async () => {
+  if (!lastCompareState) return;
+  const compareArea = document.getElementById("compareArea");
+  const prevHtml = compareArea.innerHTML;
+  compareArea.innerHTML = '<div class="empty">다른 후보를 찾고 있어요... 🤖⏳</div>';
 
-  const colHtml = (label, places) => {
-    let inner = `<h3>${escapeHtml(label)}</h3>`;
-    if (places.length === 0) {
-      inner += '<div class="empty">결과가 없어요.</div>';
-    } else {
-      inner += places.slice(0, 3).map(placeCardHtml).join("");
-    }
-    return `<div class="col">${inner}</div>`;
-  };
+  const { html, addedAny } = await buildCompareHtml(lastCompareState);
 
-  compareArea.innerHTML = `
-    <div class="lead">모임 지역 <strong>(${escapeHtml(regionName)})</strong> 기준 카카오맵 검색 결과입니다.</div>
-    <div class="compare-cols">
-      ${colHtml(catA, placesA)}
-      ${colHtml(catB, placesB)}
-    </div>
-  `;
+  if (!addedAny) {
+    alert("더 이상 보여드릴 새로운 후보가 없어요. 카테고리를 바꾸거나 나중에 다시 시도해보세요!");
+    compareArea.innerHTML = prevHtml;
+    return;
+  }
+  compareArea.innerHTML = html
+    + `<button class="dark" type="button" style="margin-top:10px;width:100%;" onclick="refreshCompareCategories()">🔄 다른 후보로 다시 비교하기</button>`;
 };
 
 let calendarViewDate = new Date();
@@ -2001,27 +2041,23 @@ window.resetGroup = async () => {
   if (!confirm("다음 모임을 위해 확정된 날짜, 장소, 투표 내역, 달력 선택을 모두 초기화하시겠어요?\n(참여 멤버와 채팅 내역은 그대로 유지됩니다!)")) return;
 
   try {
-    // 1. 그룹의 확정 날짜/장소 초기화
     await updateDoc(doc(db, "groups", currentGroupId), {
       confirmedDate: null,
       confirmedPlace: null
     });
 
-    // 2. 멤버들이 선택했던 가능 날짜(Availability) 모두 삭제
     const availQ = query(collection(db, "Availability"), where("groupId", "==", currentGroupId));
     const availSnap = await getDocs(availQ);
     availSnap.forEach(async (d) => {
       await deleteDoc(doc(db, "Availability", d.id));
     });
 
-    // 3. 멤버들이 투표했던 장소 내역(Votes) 모두 삭제
     const votesQ = query(collection(db, "Votes"), where("groupId", "==", currentGroupId));
     const votesSnap = await getDocs(votesQ);
     votesSnap.forEach(async (d) => {
       await deleteDoc(doc(db, "Votes", d.id));
     });
 
-    // 4. 화면 데이터 즉시 비우기
     selectedDates = new Set();
     renderCalendar();
     document.getElementById("dateResultArea").innerHTML = "";
@@ -2040,7 +2076,6 @@ window.resetGroup = async () => {
 <script>
 const NGROK_URL = 'https://barmaid-unexpired-spotty.ngrok-free.dev';
 
-// 챗봇 토글 함수
 function toggleChatbot() {
   const win = document.getElementById('chatbot-window');
   if (win.style.display === 'none' || win.style.display === '') {
@@ -2050,7 +2085,6 @@ function toggleChatbot() {
   }
 }
 
-// 메시지 전송 로직
 async function sendBotMessage() {
   const input = document.getElementById('chatbot-input');
   const messageText = input.value.trim();
@@ -2058,7 +2092,6 @@ async function sendBotMessage() {
 
   const msgContainer = document.getElementById('chatbot-messages');
   
-  // 사용자 메시지 띄우기
   const userBubble = document.createElement('div');
   userBubble.className = 'chat-bubble user';
   userBubble.innerText = messageText;
@@ -2067,14 +2100,12 @@ async function sendBotMessage() {
   input.value = '';
   msgContainer.scrollTop = msgContainer.scrollHeight;
 
-  // 봇 로딩 메시지 띄우기
   const botBubble = document.createElement('div');
   botBubble.className = 'chat-bubble bot';
   botBubble.innerText = '생각 중...';
   msgContainer.appendChild(botBubble);
   msgContainer.scrollTop = msgContainer.scrollHeight;
 
-  // 백엔드 서버로 요청 보내기
   try {
     const response = await fetch(`${NGROK_URL}/api/chat`, {
       method: 'POST',
