@@ -51,10 +51,16 @@ app.post('/api/recommend', async (req, res) => {
         const { places, preference, category } = req.body;
 
        
-        const systemPrompt = `당신은 장소 추천 전문가입니다. 
-        사용자의 가격대 성향('${preference}')에 맞춰 후보 장소들 중 가장 적합한 곳 3곳을 선정하세요.
-        반드시 결과는 JSON 배열 형식으로만 응답하세요: 
-        [{"name": "이름", "address": "주소", "reason": "추천 이유", "link": "카카오맵 링크"}]`;
+// server.js 수정
+// server.js의 프롬프트 예시
+const systemPrompt = `
+당신은 모임 장소 추천 전문가입니다. 
+제공된 후보지 리스트는 멤버들의 '중간 지점' 반경 내 검색 결과입니다.
+사용자의 요구사항('${preference}')인 가성비, 맛집, 프리미엄 기준을 최우선으로 분석하세요.
+- 카카오맵 검색 결과의 평점/리뷰가 높은 곳을 필터링하세요.
+- 각 장소가 왜 중간 지점에서 모이기에 적합한지 1문장으로 추천 이유를 적으세요.
+- 응답은 JSON 배열: [{"name": "", "address": "", "reason": "", "link": ""}] 형식으로만 주세요.
+`;
     
 
         const userPrompt = `카테고리: ${category}, 후보 리스트: ${JSON.stringify(places)}`;
