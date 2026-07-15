@@ -1077,22 +1077,46 @@ function loadParticipants() {
 function computeMidpoint(participants) {
   const valid = participants.filter(p => typeof p.lat === "number" && typeof p.lng === "number");
   if (valid.length === 0) return null;
+  
   const lat = valid.reduce((s, p) => s + p.lat, 0) / valid.length;
   const lng = valid.reduce((s, p) => s + p.lng, 0) / valid.length;
   return { lat, lng };
 }
-// 중간 지점이 산이나 고속도로일 때 가장 가까운 도심지로 보정하는 함수
-async function getNearestAddress(lat, lng) {
+// 1. 전국 주요 거점 도시 리스트 및 자석 함수
+const MAJOR_CITIES = [
+  { name: "대전광역시", lat: 36.3504, lng: 127.3845 },
+  { name: "청주시", lat: 36.6424, lng: 127.4890 },
+  { name: "천안시", lat: 36.8151, lng: 127.1138 },
+  { name: "서울특별시", lat: 37.5665, lng: 126.9780 },
+  { name: "대구광역시", lat: 35.8711, lng: 128.6013 },
+  { name: "부산광역시", lat: 35.1796, lng: 129.0756 },
+  { name: "광주광역시", lat: 35.1595, lng: 126.8526 },
+  { name: "수원시", lat: 37.2636, lng: 127.0286 }
+];
+
+function getNearestMajorCity(lat, lng) {
+  let closestCity = MAJOR_CITIES[0];
+  let minDistance = Infinity;
+  MAJOR_CITIES.forEach(city => {
+    const dist = haversineKm(lat, lng, city.lat, city.lng);
+    if (dist < minDistance) {
+      minDistance = dist;
+      closestCity = city;
+    }
+  });
+  return closestCity;
+}
+
+// 2. 동네 모임일 때 진짜 동네 한글 이름을 가져오는 함수
+function getExactRegionName(lat, lng) {
   return new Promise((resolve) => {
     const geocoder = new kakao.maps.services.Geocoder();
-    geocoder.coord2Address(lng, lat, (result, status) => {
+    geocoder.coord2RegionCode(lng, lat, (result, status) => {
       if (status === kakao.maps.services.Status.OK) {
-        resolve({
-          lat: parseFloat(result[0].y),
-          lng: parseFloat(result[0].x)
-        });
+        const region = result[0];
+        resolve(`${region.region_1depth_name} ${region.region_2depth_name.split(' ')[0]}`);
       } else {
-        resolve({ lat, lng });
+        resolve("중간 지점");
       }
     });
   });
@@ -1273,26 +1297,47 @@ window.recommendLocation = async () => {
   
   let mid = computeMidpoint(lastParticipants);
   if (!mid) return alert("먼저 멤버들의 주소가 등록되어야 해요.");
-  mid = await getNearestAddress(mid.lat, mid.lng);
 
-  // ★ 산속이나 고속도로에 중간 지점이 찍히면 가장 가까운 건물(도심)로 보정!
-  mid = await getNearestAddress(mid.lat, mid.lng);
-  
+ // 1. 멤버들이 중간 지점으로부터 얼마나 흩어져 있는지 '최대 거리' 계산
+  let maxDist = 0;
+  lastParticipants.forEach(p => {
+    const dist = haversineKm(mid.lat, mid.lng, p.lat, p.lng);
+    if (dist > maxDist) maxDist = dist;
+  });
+
+  let targetLat, targetLng, regionName;
+
+  // 2. 동네 모임(40km 이내)이면 원래 중간 지점 유지 / 전국 모임이면 대도시 자석 보정
+  if (maxDist < 40) {
+    targetLat = mid.lat;
+    targetLng = mid.lng;
+    regionName = await getExactRegionName(targetLat, targetLng);
+  } else {
+    const targetCity = getNearestMajorCity(mid.lat, mid.lng);
+    targetLat = targetCity.lat;
+    targetLng = targetCity.lng;
+    regionName = targetCity.name;
+  }
+
   const resultArea = document.getElementById("resultArea");
-  resultArea.innerHTML = '<div class="empty">추천 장소를 찾고 있어요...</div>';
+  resultArea.innerHTML = '<div class="empty">Gemini가 최적의 장소를 추천하고 있어요... 🤖⏳</div>';
   lastPlaces = [];
   clearRouteLines();
   document.getElementById("routeArea").innerHTML = "";
-  
+
   let categories = [...new Set(lastParticipants.flatMap(p => p.categories || []))];
   if (categories.length === 0) categories = ["맛집", "카페"];
-  
+
   const pricePref = document.getElementById("priceGroupPref").value;
-  let html = '<div class="lead">중간 지점 근처, 멤버들이 원한 카테고리 기준 추천이에요.</div>';
-  
+  let html = `<div class="lead">모임 지역 <strong>(${escapeHtml(regionName)})</strong> 기준 추천 결과입니다.</div>`;
+
   for (const cat of categories) {
-    const keyword = pricePref ? `${cat} ${pricePref}` : cat;
-    const places = await searchPlaces(keyword, mid.lat, mid.lng);
+    // 3. 검색어에 지역명을 붙여서 엉뚱한 곳이 나오지 않게 확실히 제한
+    const searchKeyword = `${regionName} ${cat}`;
+    const finalKeyword = pricePref ? `${searchKeyword} ${pricePref}` : searchKeyword;
+    
+    // 4. 결정된 target 좌표로 카카오 검색 실행
+    const places = await searchPlaces(finalKeyword, targetLat, targetLng);
     html += `<h3 style="margin-top:12px;">${escapeHtml(cat)}</h3>`;
     
     if (places.length === 0) {
